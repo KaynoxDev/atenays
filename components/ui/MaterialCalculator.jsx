@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGet } from '@/hooks/useApi';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -18,100 +18,125 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
   const [selectedMaterials, setSelectedMaterials] = useState([]);
   const [totalList, setTotalList] = useState([]);
   
-  // Chargement des matériaux depuis l'API
-  const { data: materials = [], loading: loadingMaterials, error, refetch } = 
-    useGet(`/api/materials?profession=${encodeURIComponent(profession || '')}&levelRange=${levelRange}`);
+  // Assurer que la profession est une chaîne valide
+  const safeProfession = typeof profession === 'string' ? profession : '';
+  const safeLevelRange = typeof levelRange === 'string' ? levelRange : '525';
   
-  // Ensure materials is always an array
+  // Chargement des matériaux depuis l'API avec sécurité supplémentaire
+  const { data: materials = [], loading: loadingMaterials, error, refetch } = 
+    useGet(safeProfession ? `/api/materials?profession=${encodeURIComponent(safeProfession)}&levelRange=${safeLevelRange}` : null);
+  
+  // Assurer que materials est toujours un tableau
   const safeMaterials = Array.isArray(materials) ? materials : [];
   
-  // Charger les données
-  const handleRefresh = () => {
-    refetch();
-  };
+  // Charger les données avec une fonction stable
+  const handleRefresh = useCallback(() => {
+    if (safeProfession) {
+      refetch();
+    }
+  }, [safeProfession, refetch]);
   
-  // Filtrer les matériaux
+  // Filtrer les matériaux avec sécurité améliorée
   const filteredMaterials = safeMaterials.filter(material => {
-    // Filtre de recherche
-    if (searchTerm && !material.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
+    // Protection supplémentaire contre les objets malformés
+    if (!material || typeof material !== 'object') return false;
+    
+    // Filtre de recherche avec vérification du type de données
+    if (searchTerm && typeof material.name === 'string') {
+      const materialName = material.name.toLowerCase();
+      const searchTermLower = searchTerm.toLowerCase();
+      if (!materialName.includes(searchTermLower)) {
+        return false;
+      }
+    } else if (searchTerm) {
+      return false; // Si searchTerm est défini mais material.name n'est pas une chaîne
     }
     
-    // Filtres par onglet
-    if (activeTab === 'craftable' && (!material.isBar || !material.barCrafting)) {
-      return false;
-    } else if (activeTab === 'raw' && material.isBar && material.barCrafting) {
-      return false;
+    // Filtres par onglet avec vérifications supplémentaires
+    if (activeTab === 'craftable') {
+      return material.isBar === true && material.barCrafting;
+    } else if (activeTab === 'raw') {
+      return material.isBar !== true;
     }
     
     return true;
   });
   
-  // Ajouter un matériau à la sélection
-  const handleAddMaterial = (material, quantity) => {
+  // Ajouter un matériau à la sélection avec vérification améliorée
+  const handleAddMaterial = useCallback((material, quantity) => {
+    if (!material || typeof material !== 'object') return;
+    
     setSelectedMaterials(prev => {
       const existingIndex = prev.findIndex(m => m.id === material._id);
       
       if (existingIndex >= 0) {
         // Mettre à jour la quantité si le matériau existe déjà
         const updated = [...prev];
-        updated[existingIndex].quantity += quantity;
+        updated[existingIndex].quantity = (updated[existingIndex].quantity || 0) + (quantity || 1);
         return updated;
       } else {
-        // Ajouter un nouveau matériau
+        // Ajouter un nouveau matériau avec vérifications des propriétés
         return [...prev, {
-          id: material._id,
-          name: material.name,
-          iconName: material.iconName,
-          quantity: quantity,
-          isBar: material.isBar,
-          barCrafting: material.barCrafting
+          id: material._id || `material-${Date.now()}`,
+          name: material.name || 'Matériau sans nom',
+          iconName: material.iconName || '',
+          quantity: quantity || 1,
+          isBar: !!material.isBar,
+          barCrafting: material.barCrafting || null
         }];
       }
     });
-  };
+  }, []);
   
-  // Supprimer un matériau de la sélection
-  const handleRemoveMaterial = (materialId) => {
+  // Supprimer un matériau avec vérification
+  const handleRemoveMaterial = useCallback((materialId) => {
+    if (!materialId) return;
     setSelectedMaterials(prev => prev.filter(m => m.id !== materialId));
-  };
+  }, []);
   
-  // Changer la quantité d'un matériau sélectionné
-  const handleQuantityChange = (materialId, newQuantity) => {
-    if (newQuantity < 1) return;
+  // Changer la quantité d'un matériau avec vérification
+  const handleQuantityChange = useCallback((materialId, newQuantity) => {
+    if (!materialId || newQuantity < 1) return;
     
     setSelectedMaterials(prev => 
       prev.map(m => m.id === materialId ? { ...m, quantity: newQuantity } : m)
     );
-  };
+  }, []);
   
-  // Calculer la liste totale des matériaux nécessaires
+  // Calculer la liste totale des matériaux nécessaires avec sécurité améliorée
   useEffect(() => {
     const calculateMaterials = () => {
+      if (!Array.isArray(selectedMaterials) || selectedMaterials.length === 0) {
+        return [];
+      }
+      
       const result = new Map();
       
-      // Fonction récursive pour ajouter des matériaux et leurs composants
+      // Fonction récursive pour ajouter des matériaux et leurs composants avec vérification
       const addMaterial = (material, quantity) => {
+        if (!material || typeof material !== 'object' || !material.name) {
+          return;
+        }
+        
+        const materialQty = Number(quantity) || 1;
+        
         // Si c'est un matériau craftable et qu'il a des composants
         if (material.isBar && material.barCrafting) {
           const { primaryResource, secondaryResource, hasSecondaryResource } = material.barCrafting;
           
-          if (primaryResource) {
-            const primaryQuantity = quantity * (primaryResource.quantityPerBar || 1);
-            
-            // Créer une clé unique basée sur le nom pour les ressources primaires
+          // Vérifications pour ressource primaire
+          if (primaryResource && primaryResource.name) {
+            const primaryQuantity = materialQty * (Number(primaryResource.quantityPerBar) || 1);
             const primaryKey = primaryResource.name;
             
             if (result.has(primaryKey)) {
-              result.set(primaryKey, {
-                ...result.get(primaryKey),
-                quantity: result.get(primaryKey).quantity + primaryQuantity
-              });
+              const existingResource = result.get(primaryKey);
+              existingResource.quantity = (existingResource.quantity || 0) + primaryQuantity;
             } else {
               result.set(primaryKey, {
                 id: primaryResource.materialId || primaryKey,
                 name: primaryResource.name,
-                iconName: primaryResource.iconName,
+                iconName: primaryResource.iconName || '',
                 quantity: primaryQuantity,
                 isRaw: true,
                 usedIn: [{
@@ -123,32 +148,36 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
             }
           }
           
-          if (hasSecondaryResource && secondaryResource) {
-            const secondaryQuantity = quantity * (secondaryResource.quantityPerBar || 1);
-            
-            // Créer une clé unique basée sur le nom pour les ressources secondaires
+          // Vérifications pour ressource secondaire
+          if (hasSecondaryResource && secondaryResource && secondaryResource.name) {
+            const secondaryQuantity = materialQty * (Number(secondaryResource.quantityPerBar) || 1);
             const secondaryKey = secondaryResource.name;
             
             if (result.has(secondaryKey)) {
-              result.set(secondaryKey, {
-                ...result.get(secondaryKey),
-                quantity: result.get(secondaryKey).quantity + secondaryQuantity
-              });
+              const existingResource = result.get(secondaryKey);
+              existingResource.quantity = (existingResource.quantity || 0) + secondaryQuantity;
               
-              // Ajouter l'information d'utilisation si elle n'existe pas déjà
-              const existingResult = result.get(secondaryKey);
-              if (!existingResult.usedIn.some(u => u.name === material.name)) {
-                existingResult.usedIn.push({
+              // Ajouter l'info d'utilisation si elle n'existe pas
+              if (Array.isArray(existingResource.usedIn)) {
+                if (!existingResource.usedIn.some(u => u.name === material.name)) {
+                  existingResource.usedIn.push({
+                    name: material.name,
+                    quantity: secondaryQuantity,
+                    iconName: material.iconName
+                  });
+                }
+              } else {
+                existingResource.usedIn = [{
                   name: material.name,
                   quantity: secondaryQuantity,
                   iconName: material.iconName
-                });
+                }];
               }
             } else {
               result.set(secondaryKey, {
                 id: secondaryResource.materialId || secondaryKey,
                 name: secondaryResource.name,
-                iconName: secondaryResource.iconName,
+                iconName: secondaryResource.iconName || '',
                 quantity: secondaryQuantity,
                 isRaw: true,
                 usedIn: [{
@@ -164,23 +193,21 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
           const key = material.name;
           
           if (result.has(key)) {
-            result.set(key, {
-              ...result.get(key),
-              quantity: result.get(key).quantity + quantity
-            });
+            const existingResource = result.get(key);
+            existingResource.quantity = (existingResource.quantity || 0) + materialQty;
           } else {
             result.set(key, {
               id: material.id,
               name: material.name,
-              iconName: material.iconName,
-              quantity: quantity,
+              iconName: material.iconName || '',
+              quantity: materialQty,
               isRaw: !material.isBar
             });
           }
         }
       };
       
-      // Ajouter chaque matériau sélectionné et ses composants si nécessaire
+      // Traiter chaque matériau sélectionné
       selectedMaterials.forEach(material => {
         addMaterial(material, material.quantity);
       });
@@ -191,18 +218,20 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
     setTotalList(calculateMaterials());
   }, [selectedMaterials]);
   
-  // Obtenir la liste des matières premières uniquement
-  const rawMaterials = totalList.filter(m => m.isRaw);
+  // Obtenir les matières premières uniquement avec vérification
+  const rawMaterials = Array.isArray(totalList) 
+    ? totalList.filter(m => m && typeof m === 'object' && m.isRaw === true)
+    : [];
   
   return (
     <div className="space-y-6">
       {/* En-tête avec le nom de la profession */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">{profession || 'Métier non spécifié'}</h2>
+          <h2 className="text-2xl font-bold">{safeProfession || 'Métier non spécifié'}</h2>
           <p className="text-muted-foreground">Calculez les matériaux nécessaires pour ce métier</p>
         </div>
-        <Button variant="outline" onClick={handleRefresh} disabled={loadingMaterials}>
+        <Button variant="outline" onClick={handleRefresh} disabled={loadingMaterials || !safeProfession}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loadingMaterials ? 'animate-spin' : ''}`} />
           Actualiser
         </Button>
@@ -245,23 +274,27 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
           <TabsTrigger value="raw">Matières premières</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="all" className="pt-4">
-          {loadingMaterials ? (
+        <TabsContent value={activeTab} className="pt-4">
+          {!safeProfession ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Veuillez sélectionner un métier pour voir les matériaux
+            </div>
+          ) : loadingMaterials ? (
             <div className="text-center py-8 text-muted-foreground">
               Chargement des matériaux...
             </div>
           ) : error ? (
             <div className="text-center py-8 text-destructive">
-              Erreur lors du chargement des matériaux
+              Erreur lors du chargement des matériaux: {error.message || "Erreur inconnue"}
             </div>
           ) : filteredMaterials.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Aucun matériau trouvé
+              Aucun matériau trouvé pour ce métier
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMaterials.map(material => (
-                <div key={material._id} className="flex items-center p-3 border rounded-md">
+              {filteredMaterials.map((material, index) => (
+                <div key={material._id || index} className="flex items-center p-3 border rounded-md">
                   <div className="flex-shrink-0 mr-3">
                     {material.iconName ? (
                       <img
@@ -327,16 +360,6 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
             </div>
           )}
         </TabsContent>
-        
-        <TabsContent value="craftable" className="pt-4">
-          {/* Contenu identique mais avec les filtres appliqués dans filteredMaterials */}
-          {/* ...même structure que l'onglet "all"... */}
-        </TabsContent>
-        
-        <TabsContent value="raw" className="pt-4">
-          {/* Contenu identique mais avec les filtres appliqués dans filteredMaterials */}
-          {/* ...même structure que l'onglet "all"... */}
-        </TabsContent>
       </Tabs>
       
       {/* Matériaux sélectionnés */}
@@ -353,7 +376,7 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {selectedMaterials.map(material => (
+              {selectedMaterials.map((material) => (
                 <TableRow key={material.id}>
                   <TableCell>
                     <div className="flex items-center">
@@ -417,7 +440,7 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rawMaterials.map(material => (
+              {rawMaterials.map((material) => (
                 <TableRow key={material.id}>
                   <TableCell>
                     <div className="flex items-center">
@@ -436,7 +459,7 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {material.usedIn ? (
+                    {Array.isArray(material.usedIn) && material.usedIn.length > 0 ? (
                       <div className="flex flex-col gap-1">
                         {material.usedIn.map((usage, idx) => (
                           <div key={idx} className="flex items-center text-xs text-muted-foreground">
