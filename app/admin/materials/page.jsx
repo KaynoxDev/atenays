@@ -199,14 +199,28 @@ export default function AdminMaterialsPage() {
         quantity: parseInt(currentMaterial.quantity) || 1
       };
       
+      // S'assurer que professions est un tableau et inclut la profession principale si définie
+      const professions = Array.isArray(materialToSave.professions) ? [...materialToSave.professions] : [];
+      
+      // Ajouter la profession principale au tableau professions si elle existe et n'est pas déjà incluse
+      if (materialToSave.profession && materialToSave.profession !== 'none' && !professions.includes(materialToSave.profession)) {
+        professions.push(materialToSave.profession);
+      }
+      
+      // Préparer les données à envoyer
+      const materialToSubmit = {
+        ...materialToSave,
+        professions, // Utiliser le tableau mis à jour
+      };
+      
       if (currentMaterial._id) {
-        await apiPut(`/api/materials/${currentMaterial._id}`, materialToSave);
+        await apiPut(`/api/materials/${currentMaterial._id}`, materialToSubmit);
         toast({
           title: "Matériau mis à jour",
           description: `${currentMaterial.name} a été mis à jour`
         });
       } else {
-        await apiPost('/api/materials', materialToSave);
+        await apiPost('/api/materials', materialToSubmit);
         toast({
           title: "Matériau ajouté",
           description: `${currentMaterial.name} a été ajouté`

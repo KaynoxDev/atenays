@@ -22,9 +22,9 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
   const safeProfession = typeof profession === 'string' ? profession : '';
   const safeLevelRange = typeof levelRange === 'string' ? levelRange : '525';
   
-  // Chargement des matériaux depuis l'API avec sécurité supplémentaire
+  // Chargement des matériaux depuis l'API avec vérification améliorée de la profession
   const { data: materials = [], loading: loadingMaterials, error, refetch } = 
-    useGet(safeProfession ? `/api/materials?profession=${encodeURIComponent(safeProfession)}&levelRange=${safeLevelRange}` : null);
+    useGet(`/api/materials?profession=${encodeURIComponent(safeProfession || '')}&levelRange=${safeLevelRange}`);
   
   // Assurer que materials est toujours un tableau
   const safeMaterials = Array.isArray(materials) ? materials : [];
@@ -36,10 +36,17 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
     }
   }, [safeProfession, refetch]);
   
-  // Filtrer les matériaux avec sécurité améliorée
+  // Filtrer les matériaux avec vérification supplémentaire de la profession
   const filteredMaterials = safeMaterials.filter(material => {
     // Protection supplémentaire contre les objets malformés
     if (!material || typeof material !== 'object') return false;
+    
+    // Vérification de l'association au métier
+    const belongsToProfession = 
+      material.profession === safeProfession || 
+      (Array.isArray(material.professions) && material.professions.includes(safeProfession));
+      
+    if (!belongsToProfession) return false;
     
     // Filtre de recherche avec vérification du type de données
     if (searchTerm && typeof material.name === 'string') {

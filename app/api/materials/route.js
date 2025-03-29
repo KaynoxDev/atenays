@@ -1,89 +1,57 @@
 import { connectToDatabase } from '@/lib/mongodb';
-// Cette directive est nécessaire pour l'export statique
-export const dynamic = "force-static";
-
 import { NextResponse } from 'next/server';
 
-// Add profession name mapping to handle translation between French and English names
-const professionMapping = {
-  // Français -> Anglais
-  "Forge": "Blacksmithing",
-  "Couture": "Tailoring",
-  "Travail du cuir": "Leatherworking",
-  "Ingénierie": "Engineering",
-  "Alchimie": "Alchemy",
-  "Enchantement": "Enchanting",
-  "Joaillerie": "Jewelcrafting", 
-  "Calligraphie": "Inscription",
-  // Anglais -> Français (for reverse lookup)
-  "Blacksmithing": "Forge",
-  "Tailoring": "Couture",
-  "Leatherworking": "Travail du cuir",
-  "Engineering": "Ingénierie",
-  "Alchemy": "Alchimie",
-  "Enchanting": "Enchantement",
-  "Jewelcrafting": "Joaillerie",
-  "Inscription": "Calligraphie"
-};
+// Cette directive est nécessaire pour l'export statique
+export const dynamic = "force-dynamic";
 
 export async function GET(request) {
   try {
+    const { db } = await connectToDatabase();
+    
+    // Récupérer les paramètres de recherche
     const { searchParams } = new URL(request.url);
     const profession = searchParams.get('profession');
     const levelRange = searchParams.get('levelRange');
+    const searchTerm = searchParams.get('search');
     const categoryId = searchParams.get('categoryId');
-
-    const { db } = await connectToDatabase();
     
-    // Build the query based on parameters
+    console.log(`Getting materials with filters: profession=${profession}, levelRange=${levelRange}, search=${searchTerm}`);
+    
+    // Construire la requête de filtre
     let query = {};
     
-    // Log for debugging
-    console.log(`API: Searching materials for profession: ${profession}, levelRange: ${levelRange}, categoryId: ${categoryId}`);
-    
-    // Handle profession filtering with language mapping
+    // Filtre par profession - CORRIGÉ pour utiliser une correspondance exacte ou inclure dans le tableau professions
     if (profession) {
-      // Get possible profession name variants (French and English)
-      const professionVariants = [profession];
-      
-      // Add the translated version if it exists
-      if (professionMapping[profession]) {
-        professionVariants.push(professionMapping[profession]);
-      }
-      
-      console.log(`API: Looking for profession variants: ${JSON.stringify(professionVariants)}`);
-      
-      // Search for any of the profession variants
       query.$or = [
-        { profession: { $in: professionVariants } },
-        { professions: { $in: professionVariants } },
-        { 'usedBy.profession': { $in: professionVariants } }
+        { profession },
+        { professions: { $in: [profession] } }
       ];
     }
     
-    // Handle level range filtering if specified
+    // Filtre par niveau
     if (levelRange) {
       query.levelRange = levelRange;
     }
     
-    // Handle category filtering if specified
+    // Filtre par terme de recherche
+    if (searchTerm) {
+      query.name = { $regex: searchTerm, $options: 'i' };
+    }
+    
+    // Filtre par catégorie
     if (categoryId) {
       query.categoryId = categoryId;
     }
     
-    console.log('API: Final search query:', JSON.stringify(query, null, 2));
+    console.log("Materials query:", JSON.stringify(query));
     
-    // Fetch materials from the database
     const materials = await db.collection('materials').find(query).toArray();
     
-    console.log(`API: Found ${materials.length} materials for profession ${profession}`);
-    if (materials.length > 0) {
-      console.log(`API: First material example: ${materials[0].name}, profession: ${materials[0].profession}`);
-    }
+    console.log(`Found ${materials.length} materials matching the query`);
     
     return NextResponse.json(materials);
   } catch (error) {
-    console.error('Error in GET materials:', error);
+    console.error('Error in GET /api/materials:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

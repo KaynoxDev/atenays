@@ -352,16 +352,30 @@ export default function AddMaterialPage() {
     try {
       setIsSubmitting(true);
       
+      // Préparer le tableau de professions
+      let materialProfessions = [];
+      
+      // Ajouter la profession principale si elle existe et n'est pas "none"
+      if (material.profession && material.profession !== 'none') {
+        materialProfessions.push(material.profession);
+      }
+      
+      // Fusionner avec les professions existantes
+      if (Array.isArray(material.professions)) {
+        material.professions.forEach(prof => {
+          if (prof && !materialProfessions.includes(prof)) {
+            materialProfessions.push(prof);
+          }
+        });
+      }
+      
       const materialToSubmit = {
         ...material,
-        quantity: Number(material.quantity),
-        profession: material.profession || (material.professions.length > 0 ? material.professions[0] : ''),
-        professions: material.profession ? 
-          [...new Set([...material.professions, material.profession])] : 
-          material.professions,
-        requiredBy: material.profession ? 
-          [...new Set([...material.requiredBy, material.profession])] : 
-          material.requiredBy
+        // S'assurer que profession est définie correctement
+        profession: material.profession || (materialProfessions.length > 0 ? materialProfessions[0] : ''),
+        // S'assurer que professions est bien un tableau
+        professions: materialProfessions,
+        // ...other properties
       };
       
       await apiPost('/api/materials', materialToSubmit);
