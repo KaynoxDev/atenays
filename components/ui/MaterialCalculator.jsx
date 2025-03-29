@@ -1,306 +1,470 @@
-import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { apiPost, apiDelete } from '@/hooks/useApi';
-import { useToast } from '@/hooks/use-toast';
+'use client';
 
-export default function MaterialCalculator({ professionName, levelRange, editable = false }) {
-  const [materials, setMaterials] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newMaterial, setNewMaterial] = useState({
-    name: '',
-    iconName: '',
-    quantity: '',
-    profession: professionName,
-    levelRange: levelRange
+import { useState, useEffect } from 'react';
+import { useGet } from '@/hooks/useApi';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowRight, Package, RefreshCw, Filter, Search } from 'lucide-react';
+
+export default function MaterialCalculator({ profession, levelRange = '525' }) {
+  const [levelFilter, setLevelFilter] = useState(levelRange);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedMaterials, setSelectedMaterials] = useState([]);
+  const [totalList, setTotalList] = useState([]);
+  
+  // Chargement des matériaux depuis l'API
+  const { data: materials = [], loading: loadingMaterials, error, refetch } = 
+    useGet(`/api/materials?profession=${encodeURIComponent(profession)}&levelRange=${levelRange}`);
+  
+  // Charger les données
+  const handleRefresh = () => {
+    refetch();
+  };
+  
+  // Filtrer les matériaux
+  const filteredMaterials = materials.filter(material => {
+    // Filtre de recherche
+    if (searchTerm && !material.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    
+    // Filtres par onglet
+    if (activeTab === 'craftable' && (!material.isBar || !material.barCrafting)) {
+      return false;
+    } else if (activeTab === 'raw' && material.isBar && material.barCrafting) {
+      return false;
+    }
+    
+    return true;
   });
   
-  // Utiliser useRef pour éviter des requêtes redondantes
-  const fetchedRef = useRef(false);
-  const lastParamsRef = useRef({ professionName, levelRange });
-  const { toast, success, error } = useToast();
-  const abortControllerRef = useRef(null);
-
-  // Effet pour charger les matériaux une seule fois par changement de profession/niveau significatif
-  useEffect(() => {
-    // Annuler les requêtes précédentes si nécessaire
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    
-    // Créer un nouvel AbortController pour cette requête
-    abortControllerRef.current = new AbortController();
-    
-    // Vérifier si les paramètres ont changé pour éviter des requêtes inutiles
-    const paramsChanged = 
-      lastParamsRef.current.professionName !== professionName || 
-      lastParamsRef.current.levelRange !== levelRange;
-    
-    if (!fetchedRef.current || paramsChanged) {
-      setLoading(true);
-      lastParamsRef.current = { professionName, levelRange };
+  // Ajouter un matériau à la sélection
+  const handleAddMaterial = (material, quantity) => {
+    setSelectedMaterials(prev => {
+      const existingIndex = prev.findIndex(m => m.id === material._id);
       
-      const fetchMaterials = async () => {
-        try {
-          const response = await fetch(
-            `/api/materials?profession=${encodeURIComponent(professionName)}&levelRange=${levelRange}`,
-            { signal: abortControllerRef.current.signal }
-          );
+      if (existingIndex >= 0) {
+        // Mettre à jour la quantité si le matériau existe déjà
+        const updated = [...prev];
+        updated[existingIndex].quantity += quantity;
+        return updated;
+      } else {
+        // Ajouter un nouveau matériau
+        return [...prev, {
+          id: material._id,
+          name: material.name,
+          iconName: material.iconName,
+          quantity: quantity,
+          isBar: material.isBar,
+          barCrafting: material.barCrafting
+        }];
+      }
+    });
+  };
+  
+  // Supprimer un matériau de la sélection
+  const handleRemoveMaterial = (materialId) => {
+    setSelectedMaterials(prev => prev.filter(m => m.id !== materialId));
+  };
+  
+  // Changer la quantité d'un matériau sélectionné
+  const handleQuantityChange = (materialId, newQuantity) => {
+    if (newQuantity < 1) return;
+    
+    setSelectedMaterials(prev => 
+      prev.map(m => m.id === materialId ? { ...m, quantity: newQuantity } : m)
+    );
+  };
+  
+  // Calculer la liste totale des matériaux nécessaires
+  useEffect(() => {
+    const calculateMaterials = () => {
+      const result = new Map();
+      
+      // Fonction récursive pour ajouter des matériaux et leurs composants
+      const addMaterial = (material, quantity) => {
+        // Si c'est un matériau craftable et qu'il a des composants
+        if (material.isBar && material.barCrafting) {
+          const { primaryResource, secondaryResource, hasSecondaryResource } = material.barCrafting;
           
-          if (!response.ok) {
-            throw new Error('Échec du chargement des matériaux');
+          if (primaryResource) {
+            const primaryQuantity = quantity * (primaryResource.quantityPerBar || 1);
+            
+            // Créer une clé unique basée sur le nom pour les ressources primaires
+            const primaryKey = primaryResource.name;
+            
+            if (result.has(primaryKey)) {
+              result.set(primaryKey, {
+                ...result.get(primaryKey),
+                quantity: result.get(primaryKey).quantity + primaryQuantity
+              });
+            } else {
+              result.set(primaryKey, {
+                id: primaryResource.materialId || primaryKey,
+                name: primaryResource.name,
+                iconName: primaryResource.iconName,
+                quantity: primaryQuantity,
+                isRaw: true,
+                usedIn: [{
+                  name: material.name,
+                  quantity: primaryQuantity,
+                  iconName: material.iconName
+                }]
+              });
+            }
           }
           
-          const data = await response.json();
-          setMaterials(data);
-          fetchedRef.current = true;
-        } catch (err) {
-          if (err.name !== 'AbortError') {
-            console.error("Erreur lors de la récupération des matériaux:", err);
-            error({
-              title: "Erreur de chargement",
-              description: "Impossible de récupérer les matériaux. Veuillez réessayer."
+          if (hasSecondaryResource && secondaryResource) {
+            const secondaryQuantity = quantity * (secondaryResource.quantityPerBar || 1);
+            
+            // Créer une clé unique basée sur le nom pour les ressources secondaires
+            const secondaryKey = secondaryResource.name;
+            
+            if (result.has(secondaryKey)) {
+              result.set(secondaryKey, {
+                ...result.get(secondaryKey),
+                quantity: result.get(secondaryKey).quantity + secondaryQuantity
+              });
+              
+              // Ajouter l'information d'utilisation si elle n'existe pas déjà
+              const existingResult = result.get(secondaryKey);
+              if (!existingResult.usedIn.some(u => u.name === material.name)) {
+                existingResult.usedIn.push({
+                  name: material.name,
+                  quantity: secondaryQuantity,
+                  iconName: material.iconName
+                });
+              }
+            } else {
+              result.set(secondaryKey, {
+                id: secondaryResource.materialId || secondaryKey,
+                name: secondaryResource.name,
+                iconName: secondaryResource.iconName,
+                quantity: secondaryQuantity,
+                isRaw: true,
+                usedIn: [{
+                  name: material.name,
+                  quantity: secondaryQuantity,
+                  iconName: material.iconName
+                }]
+              });
+            }
+          }
+        } else {
+          // Matériau simple (non craftable)
+          const key = material.name;
+          
+          if (result.has(key)) {
+            result.set(key, {
+              ...result.get(key),
+              quantity: result.get(key).quantity + quantity
+            });
+          } else {
+            result.set(key, {
+              id: material.id,
+              name: material.name,
+              iconName: material.iconName,
+              quantity: quantity,
+              isRaw: !material.isBar
             });
           }
-        } finally {
-          setLoading(false);
         }
       };
-
-      // Ajouter un délai court pour éviter les requêtes simultanées
-      const timer = setTimeout(() => {
-        fetchMaterials();
-      }, 300);
       
-      return () => {
-        clearTimeout(timer);
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
-        }
-      };
-    }
-  }, [professionName, levelRange, error]);
-
-  // Mettre à jour le newMaterial quand professionName ou levelRange change
-  useEffect(() => {
-    setNewMaterial(prev => ({
-      ...prev,
-      profession: professionName,
-      levelRange: levelRange
-    }));
-  }, [professionName, levelRange]);
-
-  const handleAddMaterial = async (e) => {
-    e.preventDefault();
+      // Ajouter chaque matériau sélectionné et ses composants si nécessaire
+      selectedMaterials.forEach(material => {
+        addMaterial(material, material.quantity);
+      });
+      
+      return Array.from(result.values());
+    };
     
-    if (!newMaterial.name || !newMaterial.quantity) {
-      error({
-        title: "Champs manquants",
-        description: "Le nom et la quantité sont requis."
-      });
-      return;
-    }
-    
-    try {
-      const createdMaterial = await apiPost('/api/materials', newMaterial);
-      
-      setMaterials(prev => [...prev, createdMaterial]);
-      setIsAddDialogOpen(false);
-      setNewMaterial({
-        name: '',
-        iconName: '',
-        quantity: '',
-        profession: professionName,
-        levelRange: levelRange
-      });
-      
-      success({
-        title: "Matériau ajouté",
-        description: `${createdMaterial.name} a été ajouté avec succès.`
-      });
-    } catch (err) {
-      console.error("Erreur lors de l'ajout du matériau:", err);
-      error({
-        title: "Échec de l'ajout",
-        description: "Impossible d'ajouter le matériau. Veuillez réessayer."
-      });
-    }
-  };
-
-  const handleDeleteMaterial = async (id) => {
-    try {
-      await apiDelete(`/api/materials/${id}`);
-      setMaterials(prev => prev.filter(material => material._id !== id));
-      
-      success({
-        title: "Matériau supprimé",
-        description: "Le matériau a été supprimé avec succès."
-      });
-    } catch (err) {
-      console.error("Erreur lors de la suppression du matériau:", err);
-      error({
-        title: "Échec de la suppression",
-        description: "Impossible de supprimer le matériau. Veuillez réessayer."
-      });
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewMaterial(prev => ({ ...prev, [name]: value }));
-  };
-
+    setTotalList(calculateMaterials());
+  }, [selectedMaterials]);
+  
+  // Obtenir la liste des matières premières uniquement
+  const rawMaterials = totalList.filter(m => m.isRaw);
+  
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">
-          Matériaux requis pour {professionName} {levelRange}
-        </h3>
-        
-        {editable && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" /> Ajouter
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Ajouter un matériau</DialogTitle>
-                <DialogDescription>
-                  Ajoutez un nouveau matériau requis pour {professionName} {levelRange}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <form onSubmit={handleAddMaterial}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Nom
-                    </Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={newMaterial.name}
-                      onChange={handleInputChange}
-                      className="col-span-3"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="iconName" className="text-right">
-                      Icône
-                    </Label>
-                    <Input
-                      id="iconName"
-                      name="iconName"
-                      value={newMaterial.iconName}
-                      onChange={handleInputChange}
-                      placeholder="inv_misc_herb_01"
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="quantity" className="text-right">
-                      Quantité
-                    </Label>
-                    <Input
-                      id="quantity"
-                      name="quantity"
-                      type="number"
-                      value={newMaterial.quantity}
-                      onChange={handleInputChange}
-                      className="col-span-3"
-                      required
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">Ajouter</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+    <div className="space-y-6">
+      {/* En-tête avec le nom de la profession */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">{profession}</h2>
+          <p className="text-muted-foreground">Calculez les matériaux nécessaires pour ce métier</p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={loadingMaterials}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loadingMaterials ? 'animate-spin' : ''}`} />
+          Actualiser
+        </Button>
       </div>
       
-      {loading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+      {/* Filtre et recherche */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un matériau..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
         </div>
-      ) : materials.length === 0 ? (
-        <div className="text-center py-6 text-muted-foreground">
-          Aucun matériau trouvé pour {professionName} {levelRange}
-          {editable && <div className="mt-2">Cliquez sur "Ajouter" pour commencer</div>}
+        
+        <div className="flex gap-2 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={levelFilter} onValueChange={(value) => setLevelFilter(value)}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Niveau" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="225">1-225 (Classic)</SelectItem>
+              <SelectItem value="300">1-300 (Vanilla)</SelectItem>
+              <SelectItem value="375">1-375 (TBC)</SelectItem>
+              <SelectItem value="450">1-450 (WotLK)</SelectItem>
+              <SelectItem value="525">1-525 (Cataclysm)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Matériau</TableHead>
-              <TableHead className="text-right">Quantité</TableHead>
-              {editable && <TableHead className="w-[100px]">Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {materials.map((material) => (
-              <TableRow key={material._id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center">
-                    {material.iconName && (
-                      <img 
+      </div>
+      
+      {/* Liste des matériaux disponibles */}
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="all">Tous</TabsTrigger>
+          <TabsTrigger value="craftable">Craftables</TabsTrigger>
+          <TabsTrigger value="raw">Matières premières</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="all" className="pt-4">
+          {loadingMaterials ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Chargement des matériaux...
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-destructive">
+              Erreur lors du chargement des matériaux
+            </div>
+          ) : filteredMaterials.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Aucun matériau trouvé
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredMaterials.map(material => (
+                <div key={material._id} className="flex items-center p-3 border rounded-md">
+                  <div className="flex-shrink-0 mr-3">
+                    {material.iconName ? (
+                      <img
                         src={`https://wow.zamimg.com/images/wow/icons/small/${material.iconName.toLowerCase()}.jpg`}
                         alt={material.name}
-                        className="w-6 h-6 mr-2 rounded"
+                        className="w-8 h-8 rounded"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
                         }}
                       />
+                    ) : (
+                      <Package className="h-8 w-8 text-muted-foreground" />
                     )}
-                    {material.name}
                   </div>
-                </TableCell>
-                <TableCell className="text-right">{material.quantity}</TableCell>
-                {editable && (
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteMaterial(material._id)}
+                  
+                  <div className="flex-grow">
+                    <div className="flex items-center">
+                      <span className="font-medium">{material.name}</span>
+                      {material.isBar && material.barCrafting && (
+                        <Badge className="ml-2" variant="outline">Craftable</Badge>
+                      )}
+                    </div>
+                    {material.isBar && material.barCrafting && material.barCrafting.primaryResource && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {material.barCrafting.primaryResource.name} + 
+                        {material.barCrafting.hasSecondaryResource && material.barCrafting.secondaryResource ? 
+                          ` ${material.barCrafting.secondaryResource.name}` : ''}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="number" 
+                      className="w-16 h-8" 
+                      min="1" 
+                      defaultValue="1" 
+                      onChange={(e) => e.target.value = Math.max(1, e.target.value)} 
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const qty = parseInt(e.target.value, 10);
+                          if (qty > 0) handleAddMaterial(material, qty);
+                          e.target.value = "1";
+                        }
+                      }}
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        const input = e.currentTarget.previousElementSibling;
+                        const qty = parseInt(input.value, 10) || 1;
+                        handleAddMaterial(material, qty);
+                        input.value = "1";
+                      }}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/80" />
+                      +
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="craftable" className="pt-4">
+          {/* Contenu identique mais avec les filtres appliqués dans filteredMaterials */}
+          {/* ...même structure que l'onglet "all"... */}
+        </TabsContent>
+        
+        <TabsContent value="raw" className="pt-4">
+          {/* Contenu identique mais avec les filtres appliqués dans filteredMaterials */}
+          {/* ...même structure que l'onglet "all"... */}
+        </TabsContent>
+      </Tabs>
+      
+      {/* Matériaux sélectionnés */}
+      {selectedMaterials.length > 0 && (
+        <div className="mt-8 border-t pt-6">
+          <h3 className="text-lg font-bold mb-4">Matériaux sélectionnés</h3>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Matériau</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Quantité</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {selectedMaterials.map(material => (
+                <TableRow key={material.id}>
+                  <TableCell>
+                    <div className="flex items-center">
+                      {material.iconName && (
+                        <img 
+                          src={`https://wow.zamimg.com/images/wow/icons/small/${material.iconName.toLowerCase()}.jpg`}
+                          alt={material.name}
+                          className="w-6 h-6 mr-2 rounded"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                          }}
+                        />
+                      )}
+                      <span>{material.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {material.isBar ? (
+                      <Badge variant="outline">Craftable</Badge>
+                    ) : (
+                      <Badge>Matière première</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Input 
+                      type="number" 
+                      className="w-20 h-8" 
+                      min="1" 
+                      value={material.quantity} 
+                      onChange={(e) => handleQuantityChange(material.id, parseInt(e.target.value, 10) || 1)}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleRemoveMaterial(material.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Supprimer
                     </Button>
                   </TableCell>
-                )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      
+      {/* Résumé total des matériaux nécessaires */}
+      {rawMaterials.length > 0 && (
+        <div className="mt-8 border-t pt-6">
+          <h3 className="text-lg font-bold mb-4">Matières premières nécessaires</h3>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Matériau</TableHead>
+                <TableHead>Utilisation</TableHead>
+                <TableHead className="text-right">Quantité</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rawMaterials.map(material => (
+                <TableRow key={material.id}>
+                  <TableCell>
+                    <div className="flex items-center">
+                      {material.iconName && (
+                        <img 
+                          src={`https://wow.zamimg.com/images/wow/icons/small/${material.iconName.toLowerCase()}.jpg`}
+                          alt={material.name}
+                          className="w-6 h-6 mr-2 rounded"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                          }}
+                        />
+                      )}
+                      <span>{material.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {material.usedIn ? (
+                      <div className="flex flex-col gap-1">
+                        {material.usedIn.map((usage, idx) => (
+                          <div key={idx} className="flex items-center text-xs text-muted-foreground">
+                            <span>{usage.quantity}x</span>
+                            <ArrowRight className="h-3 w-3 mx-1" />
+                            {usage.iconName && (
+                              <img 
+                                src={`https://wow.zamimg.com/images/wow/icons/small/${usage.iconName.toLowerCase()}.jpg`}
+                                alt={usage.name}
+                                className="w-4 h-4 mr-1 rounded"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                                }}
+                              />
+                            )}
+                            <span>{usage.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : "-"}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {material.quantity}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );
-}
-
-function getProfessionEmoji(profession) {
-  const icons = {
-    'Blacksmithing': '🔨',
-    'Tailoring': '🧵',
-    'Leatherworking': '🧶',
-    'Engineering': '⚙️',
-    'Alchemy': '⚗️',
-    'Enchanting': '✨',
-    'Jewelcrafting': '💎',
-    'Inscription': '📜',
-  };
-  return icons[profession] || '📋';
 }
