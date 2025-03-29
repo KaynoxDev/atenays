@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+/* Professional Accounting Color Palette */
+@layer base {
+  :root {
+    /* Background & Foreground Colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    
+    /* Card Colors */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    
+    /* Popover/Menu Colors (solid, not transparent) */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    
+    /* Primary Brand Colors - Professional Blue */
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    
+    /* Secondary Colors - Accent Color */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    
+    /* Neutral/Muted Colors */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    
+    /* Accent Colors - For Highlights */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    
+    /* Destructive Colors */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    
+    /* Border & Input Colors */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    
+    /* Accounting-Specific Colors */
+    --accounting-primary: 215, 60%, 25%; /* Same as primary */
+    --accounting-secondary: 140, 40%, 40%; /* Green for financial positives */
+    --accounting-neutral: 215, 15%, 65%; /* Gray-blue for neutral items */
+    --accounting-alert: 35, 90%, 55%; /* Amber for warnings/alerts */
+    --accounting-error: 0, 65%, 45%; /* Same as destructive */
+    
+    /* Success/Warning/Info Semantic Colors */
+    --success: 150, 85%, 40%;
+    --success-foreground: 0, 0%, 100%;
+    
+    --warning: 35, 95%, 50%;
+    --warning-foreground: 35, 40%, 25%;
+    
+    --info: 215, 90%, 50%;
+    --info-foreground: 0, 0%, 100%;
+    
+    --radius: 0.5rem;
+  }
+
+  /* Dark Mode - Professional & Easy on the Eyes */
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.5% 48%;
+
+    --accounting-primary: 215, 55%, 55%;
+    --accounting-secondary: 145, 50%, 50%;
+    --accounting-neutral: 215, 25%, 65%;
+    --accounting-alert: 35, 90%, 60%;
+    --accounting-error: 0, 70%, 50%;
+    
+    --success: 150, 70%, 40%;
+    --success-foreground: 0, 0%, 100%;
+    
+    --warning: 35, 90%, 55%;
+    --warning-foreground: 0, 0%, 100%;
+    
+    --info: 215, 80%, 60%;
+    --info-foreground: 0, 0%, 100%;
+  }
+}
+
+/* Ensure SelectMenus and dropdowns are opaque */
+.select-content,
+[data-radix-popper-content-wrapper] {
+  background-color: hsl(var(--popover)) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Professional Accounting UI Styles */
+.accounting-section {
+  border-left: 3px solid hsl(var(--primary));
+  padding-left: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.amount-positive {
+  color: hsl(var(--success));
+  font-weight: 500;
+}
+
+.amount-negative {
+  color: hsl(var(--destructive));
+  font-weight: 500;
+}
+
+.amount-neutral {
+  color: hsl(var(--accounting-neutral));
+  font-weight: 500;
+}
+
+.financial-table th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+  color: hsl(var(--primary));
+}
+
+.financial-table tr:nth-child(even) {
+  background-color: hsl(var(--accent) / 0.3);
+}
+
+/* Totals row styling */
+.financial-table tr.totals {
+  font-weight: 700;
+  border-top: 2px solid hsl(var(--border));
+}
+
+/* Account number styling */
+.account-number {
+  font-family: monospace;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Navigation styling */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
+}
+
+.sidebar-link-active {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.sidebar-link-inactive {
+  color: hsl(var(--foreground));
+}
+
+.sidebar-link-inactive:hover {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Améliorations des styles de base */
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Styles améliorés pour les composants UI courants */
+@layer components {
+  /* Inputs avec fond solide et bordures visibles */
+  .input, select, textarea {
+    background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+  }
+  
+  /* Boutons avec ombres légères */
+  button, 
+  [type='button'], 
+  [type='reset'], 
+  [type='submit'] {
+    transition: all 0.2s ease;
+  }
+  
+  button:hover,
+  [type='button']:hover,
+  [type='reset']:hover,
+  [type='submit']:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Cartes avec ombres améliorées */
+  .card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  
+  .card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+  
+  /* Tableaux plus professionnels */
+  table thead {
+    background-color: hsl(var(--muted));
+    font-weight: 500;
+  }
+  
+  table th {
+    color: hsl(var(--primary));
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+  
+  table tbody tr {
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  
+  table tbody tr:hover {
+    background-color: hsl(var(--accent) / 0.5);
+  }
+}
+
+/* SelectMenu avec fond opaque et ombre */
+.select-content {
+  background-color: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Correction spécifique pour les SelectItems */
+.select-item {
+  background-color: transparent !important;
+}
+
+.select-item[data-highlighted] {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Classes pour badges financiers */
+.finance-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.finance-badge-success {
+  background-color: hsl(var(--success) / 0.15);
+  color: hsl(var(--success));
+}
+
+.finance-badge-warning {
+  background-color: hsl(var(--warning) / 0.15);
+  color: hsl(var(--warning));
+}
+
+.finance-badge-info {
+  background-color: hsl(var(--info) / 0.15);
+  color: hsl(var(--info));
+}
+
+.finance-badge-error {
+  background-color: hsl(var(--destructive) / 0.15);
+  color: hsl(var(--destructive));
+}
+
+/* Animation douce pour les transitions */
+.soft-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* S'assurer que le mode sombre est correctement appliqué */
+html.dark body {
+  color-scheme: dark;
+}
