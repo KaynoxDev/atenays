@@ -1,7 +1,0 @@
-{
-  "version": 2,
-  "buildCommand": "npm install tailwindcss@4.0.17 postcss autoprefixer --no-save && npm run build",
-  "installCommand": "npm install --legacy-peer-deps",
-  "framework": "nextjs",
-  "outputDirectory": ".next"
-}
