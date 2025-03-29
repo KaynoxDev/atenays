@@ -50,40 +50,11 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Palette financière
-        finance: {
-          navy: "hsl(211, 65%, 38%)",     // Bleu professionnel 
-          green: "hsl(145, 40%, 35%)",    // Vert comptabilité
-          grey: "hsl(216, 15%, 87%)",     // Gris bordure
-          light: "hsl(216, 33%, 97%)",    // Fond clair
-          dark: "hsl(217, 32%, 12%)",     // Fond sombre
-        },
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
-        },
-        info: {
-          DEFAULT: "hsl(var(--info))",
-          foreground: "hsl(var(--info-foreground))",
-        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-      },
-      boxShadow: {
-        'soft': '0 4px 20px rgba(0, 0, 0, 0.05)',
-        'card': '0 2px 8px rgba(0, 0, 0, 0.06)',
-        'dropdown': '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-        card: "0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06)",
-        dropdown: "0 4px 20px rgba(0, 0, 0, 0.12)",
-        button: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        elevated: "0 8px 16px rgba(0, 0, 0, 0.08)",
       },
       keyframes: {
         "accordion-down": {
@@ -98,10 +69,6 @@ module.exports = {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-      },
-      fontFamily: {
-        sans: ['var(--font-inter)', 'sans-serif'],
-        roboto: ['var(--font-roboto)', 'sans-serif'],
       },
     },
   },
