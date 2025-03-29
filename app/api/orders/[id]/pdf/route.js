@@ -68,14 +68,14 @@ export async function GET(request, { params }) {
       console.error('Error rendering PDF:', renderError);
       return NextResponse.json({ 
         error: `PDF rendering failed: ${renderError.message}`,
-        stack: process.env.NODE_ENV === 'development' ? renderError.stack : undefined
+        stack: process.env.NODE_ENV === 'production' ? renderError.stack : undefined
       }, { status: 500 });
     }
   } catch (error) {
     console.error('Error generating PDF:', error);
     return NextResponse.json({ 
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: process.env.NODE_ENV === 'production' ? error.stack : undefined
     }, { status: 500 });
   }
 }

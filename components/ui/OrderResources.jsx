@@ -28,6 +28,7 @@ export default function OrderResources({ order, professions, checkedResources = 
           return;
         }
         
+        // Récupérer les matériaux pour chaque profession
         const promises = professions.map(async (prof) => {
           const response = await fetch(
             `/api/materials?profession=${encodeURIComponent(prof.name)}&levelRange=${prof.levelRange}`
@@ -47,9 +48,10 @@ export default function OrderResources({ order, professions, checkedResources = 
         
         const results = await Promise.all(promises);
         
-        // Objet pour suivre les ressources cumulées par nom
-        const resourcesMap = new Map();
-        const craftableResourcesMap = new Map();
+        // Maps pour suivre les ressources
+        const resourcesMap = new Map(); // Pour les matières premières
+        const craftableResourcesMap = new Map(); // Pour les craftables
+        const craftRelationships = new Map(); // Pour stocker les relations de craft
         
         // Premier passage : collecter et cumuler toutes les ressources
         results.forEach(profMaterials => {
@@ -66,7 +68,7 @@ export default function OrderResources({ order, professions, checkedResources = 
               originalQuantity: material.quantity || 1
             };
             
-            // Stocker les ressources craftables séparément pour traitement ultérieur
+            // Stocker les ressources craftables séparément
             if (resourceWithMeta.isCraftable) {
               if (craftableResourcesMap.has(materialName)) {
                 // Cumuler les quantités pour les ressources identiques
@@ -80,6 +82,7 @@ export default function OrderResources({ order, professions, checkedResources = 
               } else {
                 // Nouvelle ressource craftable
                 resourceWithMeta.professions = [profMaterials.profession];
+                resourceWithMeta.craftComponents = []; // Pour stocker les composants
                 craftableResourcesMap.set(materialName, resourceWithMeta);
               }
             } else {
@@ -103,176 +106,139 @@ export default function OrderResources({ order, professions, checkedResources = 
           });
         });
         
-        // Convertir les Maps en arrays
-        const allResources = [...resourcesMap.values()];
-        const craftableResources = [...craftableResourcesMap.values()];
-        
-        // Deuxième passage pour ajouter les relations de craft avec quantités cumulées
-        craftableResources.forEach(craftable => {
-          // Traiter la ressource primaire
-          if (craftable.barCrafting.primaryResource && craftable.barCrafting.primaryResource.name) {
-            const primary = craftable.barCrafting.primaryResource;
-            const primaryName = primary.name;
-            
-            // Trouver si la ressource primaire est déjà dans notre liste
-            const existingPrimary = allResources.find(r => 
-              r.name.toLowerCase() === primaryName.toLowerCase()
-            );
-            
-            // Calculer la quantité totale nécessaire pour tous les craftables
-            const totalQuantityNeeded = craftable.quantity * (primary.quantityPerBar || 1);
-            
-            if (existingPrimary) {
-              // Ajouter l'info que cette ressource est utilisée dans un craft
-              if (!existingPrimary.usedIn) existingPrimary.usedIn = [];
+        // Deuxième passage pour établir les relations entre craftables et composants
+        craftableResourcesMap.forEach((craftable) => {
+          if (craftable.barCrafting) {
+            // Traiter la ressource primaire
+            if (craftable.barCrafting.primaryResource && craftable.barCrafting.primaryResource.name) {
+              const primary = craftable.barCrafting.primaryResource;
+              const primaryName = primary.name;
+              const totalQuantityNeeded = craftable.quantity * (primary.quantityPerBar || 1);
               
-              // Vérifier si ce craftable est déjà référencé
-              const existingUsage = existingPrimary.usedIn.find(u => u.outputName === craftable.name);
-              
-              if (existingUsage) {
-                // Cumuler la quantité nécessaire
-                existingUsage.quantityNeeded += totalQuantityNeeded;
-                existingUsage.instances = (existingUsage.instances || 1) + 1;
-              } else {
-                // Ajouter une nouvelle référence
-                existingPrimary.usedIn.push({
-                  outputId: craftable.id,
-                  outputName: craftable.name,
-                  quantityNeeded: totalQuantityNeeded,
-                  iconName: craftable.iconName,
-                  instances: 1 // Nombre d'instances de ce craft
-                });
-              }
-            } else {
-              // Ajouter comme nouvelle ressource
-              const newResourceId = primary.materialId || `${primaryName}-resource`;
-              const newResource = {
-                id: newResourceId,
+              // Ajouter ce composant au craftable
+              craftable.craftComponents.push({
                 name: primaryName,
                 iconName: primary.iconName,
                 quantity: totalQuantityNeeded,
-                isPrimaryResource: true,
-                profession: craftable.profession,
-                professions: craftable.professions,
-                levelRange: craftable.levelRange,
-                usedIn: [{
-                  outputId: craftable.id,
-                  outputName: craftable.name,
-                  quantityNeeded: totalQuantityNeeded,
-                  iconName: craftable.iconName,
-                  instances: 1
-                }]
-              };
+                isPrimary: true
+              });
               
-              allResources.push(newResource);
-            }
-          }
-          
-          // Même logique pour les ressources secondaires
-          if (craftable.barCrafting.hasSecondaryResource && 
-              craftable.barCrafting.secondaryResource && 
-              craftable.barCrafting.secondaryResource.name) {
-            
-            const secondary = craftable.barCrafting.secondaryResource;
-            const secondaryName = secondary.name;
-            
-            // Calculer la quantité totale nécessaire pour tous les craftables
-            const totalQuantityNeeded = craftable.quantity * (secondary.quantityPerBar || 1);
-            
-            // Vérifier si cette ressource existe déjà
-            const existingSecondary = allResources.find(r => 
-              r.name.toLowerCase() === secondaryName.toLowerCase()
-            );
-            
-            if (existingSecondary) {
-              // Ajouter l'info que cette ressource est utilisée dans un craft
-              if (!existingSecondary.usedIn) existingSecondary.usedIn = [];
+              // Trouver la ressource dans notre liste
+              const primaryResource = resourcesMap.get(primaryName);
               
-              // Vérifier si ce craftable est déjà référencé
-              const existingUsage = existingSecondary.usedIn.find(u => u.outputName === craftable.name);
-              
-              if (existingUsage) {
-                // Cumuler la quantité nécessaire
-                existingUsage.quantityNeeded += totalQuantityNeeded;
-                existingUsage.instances = (existingUsage.instances || 1) + 1;
-              } else {
-                // Ajouter une nouvelle référence
-                existingSecondary.usedIn.push({
-                  outputId: craftable.id,
-                  outputName: craftable.name,
-                  quantityNeeded: totalQuantityNeeded,
-                  iconName: craftable.iconName,
-                  isSecondaryResource: true,
-                  instances: 1
-                });
+              // Si la ressource n'existe pas, l'ajouter
+              if (!primaryResource) {
+                const newResourceId = primary.materialId || `${primaryName}-resource`;
+                const newResource = {
+                  id: newResourceId,
+                  name: primaryName,
+                  iconName: primary.iconName,
+                  quantity: totalQuantityNeeded,
+                  isPrimaryResource: true,
+                  profession: craftable.profession,
+                  professions: craftable.professions,
+                  levelRange: craftable.levelRange
+                };
+                resourcesMap.set(primaryName, newResource);
               }
-            } else {
-              // Ajouter comme nouvelle ressource
-              const newResourceId = secondary.materialId || `${secondaryName}-resource`;
-              const newResource = {
-                id: newResourceId,
+              
+              // Établir la relation de craft
+              if (!craftRelationships.has(primaryName)) {
+                craftRelationships.set(primaryName, []);
+              }
+              craftRelationships.get(primaryName).push({
+                craftableId: craftable.id,
+                craftableName: craftable.name,
+                iconName: craftable.iconName,
+                quantityNeeded: totalQuantityNeeded
+              });
+            }
+            
+            // Traiter la ressource secondaire (même logique)
+            if (craftable.barCrafting.hasSecondaryResource && 
+                craftable.barCrafting.secondaryResource && 
+                craftable.barCrafting.secondaryResource.name) {
+              
+              const secondary = craftable.barCrafting.secondaryResource;
+              const secondaryName = secondary.name;
+              const totalQuantityNeeded = craftable.quantity * (secondary.quantityPerBar || 1);
+              
+              // Ajouter ce composant au craftable
+              craftable.craftComponents.push({
                 name: secondaryName,
                 iconName: secondary.iconName,
                 quantity: totalQuantityNeeded,
-                isSecondaryResource: true,
-                profession: craftable.profession,
-                professions: craftable.professions,
-                levelRange: craftable.levelRange,
-                usedIn: [{
-                  outputId: craftable.id,
-                  outputName: craftable.name,
-                  quantityNeeded: totalQuantityNeeded,
-                  iconName: craftable.iconName,
-                  isSecondaryResource: true,
-                  instances: 1
-                }]
-              };
+                isSecondary: true
+              });
               
-              allResources.push(newResource);
+              // Vérifier si cette ressource existe déjà
+              const secondaryResource = resourcesMap.get(secondaryName);
+              
+              if (!secondaryResource) {
+                // Ajouter comme nouvelle ressource
+                const newResourceId = secondary.materialId || `${secondaryName}-resource`;
+                const newResource = {
+                  id: newResourceId,
+                  name: secondaryName,
+                  iconName: secondary.iconName,
+                  quantity: totalQuantityNeeded,
+                  isSecondaryResource: true,
+                  profession: craftable.profession,
+                  professions: craftable.professions,
+                  levelRange: craftable.levelRange
+                };
+                resourcesMap.set(secondaryName, newResource);
+              }
+              
+              // Établir la relation de craft
+              if (!craftRelationships.has(secondaryName)) {
+                craftRelationships.set(secondaryName, []);
+              }
+              craftRelationships.get(secondaryName).push({
+                craftableId: craftable.id,
+                craftableName: craftable.name,
+                iconName: craftable.iconName,
+                quantityNeeded: totalQuantityNeeded,
+                isSecondary: true
+              });
             }
-          }
-
-          // Après avoir traité les ressources principales et secondaires, ajouter les informations de ratio
-          if (craftable.barCrafting.primaryResource && 
-              craftable.barCrafting.hasSecondaryResource && 
-              craftable.barCrafting.secondaryResource) {
             
-            const primaryResource = craftable.barCrafting.primaryResource;
-            const secondaryResource = craftable.barCrafting.secondaryResource;
-            
-            // Trouver les ressources dans notre liste
-            const primaryInList = allResources.find(r => 
-              r.name.toLowerCase() === primaryResource.name.toLowerCase()
-            );
-            
-            const secondaryInList = allResources.find(r => 
-              r.name.toLowerCase() === secondaryResource.name.toLowerCase()
-            );
-            
-            if (primaryInList && secondaryInList) {
-              // Calculer le ratio: combien de ressource secondaire pour 1 de ressource primaire
+            // Calculer et stocker les informations de ratio dans le craftable
+            if (craftable.barCrafting.primaryResource && 
+                craftable.barCrafting.hasSecondaryResource && 
+                craftable.barCrafting.secondaryResource) {
+              
+              const primaryResource = craftable.barCrafting.primaryResource;
+              const secondaryResource = craftable.barCrafting.secondaryResource;
+              
+              // Calculer le ratio de craft
               const primaryPerBar = primaryResource.quantityPerBar || 1;
               const secondaryPerBar = secondaryResource.quantityPerBar || 1;
               
-              const ratio = secondaryPerBar / primaryPerBar;
-              
-              // Ajouter cette information aux deux ressources
-              primaryInList.craftRatio = {
-                ratio,
-                targetResource: secondaryResource.name,
-                primaryPerBar,
-                secondaryPerBar
-              };
-              
-              secondaryInList.craftRatio = {
-                ratio: 1 / ratio,  // Ratio inverse pour la ressource secondaire
-                targetResource: primaryResource.name,
+              // Ajouter cette information au craftable
+              craftable.craftRatio = {
+                primaryName: primaryResource.name,
+                secondaryName: secondaryResource.name,
                 primaryPerBar,
                 secondaryPerBar,
-                isSecondary: true
+                ratio: secondaryPerBar / primaryPerBar
               };
             }
           }
+        });
+        
+        // Fusionner toutes les ressources en une seule liste
+        const allResources = [...resourcesMap.values(), ...craftableResourcesMap.values()];
+        
+        // Pour chaque ressource craftable, ajouter les informations de craft et de composants
+        allResources.forEach(resource => {
+          // Pour un craftable, ajouter les composants et ratios
+          if (resource.isCraftable && resource.craftComponents) {
+            // Déjà fait lors du traitement précédent
+          }
+          
+          // Ne pas ajouter d'information usedIn dans les matières premières
+          // Toutes les informations sont déjà dans le craftable
         });
         
         setResourceList(allResources);
@@ -292,7 +258,7 @@ export default function OrderResources({ order, professions, checkedResources = 
     if (activeTab === 'checked') return checkedResources[resource.id];
     if (activeTab === 'unchecked') return !checkedResources[resource.id];
     if (activeTab === 'craft') return resource.isCraftable;
-    if (activeTab === 'raw') return !resource.isCraftable && !resource.usedIn;
+    if (activeTab === 'raw') return !resource.isCraftable;
     return true;
   });
   
@@ -415,103 +381,62 @@ export default function OrderResources({ order, professions, checkedResources = 
                           )}
                         </TableCell>
                         <TableCell>
-                          {resource.usedIn && resource.usedIn.length > 0 ? (
+                          {/* Afficher les informations de craft uniquement pour les ressources craftables */}
+                          {resource.isCraftable && (
                             <div className="flex flex-col gap-1">
-                              {resource.usedIn.map((usage, idx) => (
-                                <div key={idx} className="flex items-center text-xs text-muted-foreground">
-                                  <span>{usage.quantityNeeded}x</span>
-                                  <ArrowRight className="h-3 w-3 mx-1" />
-                                  {usage.iconName && (
-                                    <img 
-                                      src={`https://wow.zamimg.com/images/wow/icons/small/${usage.iconName.toLowerCase()}.jpg`}
-                                      alt={usage.outputName}
-                                      className="w-4 h-4 mr-1 rounded"
-                                      onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
-                                      }}
-                                    />
-                                  )}
-                                  <span>{usage.outputName}</span>
-                                  {usage.instances > 1 && (
-                                    <Badge className="ml-1 px-1 py-0 h-4 text-[0.6rem]" variant="outline">
-                                      x{usage.instances}
-                                    </Badge>
-                                  )}
-                                  {usage.isSecondaryResource && (
-                                    <Badge className="ml-1 px-1 py-0 h-4 text-[0.6rem]" variant="secondary">Secondaire</Badge>
-                                  )}
-                                </div>
-                              ))}
-                              
-                              {resource.craftRatio && (
-                                <div className="mt-1 p-1 bg-muted/20 rounded text-xs">
-                                  {resource.usedIn && resource.usedIn[0] && (
-                                    <div className="font-medium mb-1">
-                                      Pour fabriquer {resource.usedIn[0].outputName}:
-                                    </div>
-                                  )}
-                                  <div>
-                                    <span className="font-medium">{resource.craftRatio.primaryPerBar}x</span> {resource.craftRatio.isSecondary ? resource.craftRatio.targetResource : resource.name} +
-                                    <span className="font-medium"> {resource.craftRatio.secondaryPerBar}x</span> {resource.craftRatio.isSecondary ? resource.name : resource.craftRatio.targetResource} 
-                                    <span> = 1 barre</span>
-                                  </div>
-                                  {resource.quantity > 1 && (
-                                    <div className="text-[10px] text-muted-foreground mt-1">
-                                      Pour {resource.quantity}x {resource.name}, vous aurez besoin d'environ 
-                                      {resource.craftRatio.isSecondary 
-                                        ? ` ${Math.ceil(resource.quantity * resource.craftRatio.ratio)}x ${resource.craftRatio.targetResource}`
-                                        : ` ${Math.ceil(resource.quantity * resource.craftRatio.ratio)}x ${resource.craftRatio.targetResource}`
-                                      }
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ) : resource.isCraftable ? (
-                            <div className="flex flex-col gap-1">
+                              {/* Affichage des composants requis pour ce craftable */}
                               <div className="text-xs text-muted-foreground">
                                 <span className="font-medium">Recette:</span>
                               </div>
-                              <div className="flex items-center text-xs gap-1">
-                                {resource.barCrafting?.primaryResource && (
-                                  <div className="flex items-center">
-                                    <span>{resource.barCrafting.primaryResource.quantityPerBar}x {resource.barCrafting.primaryResource.name}</span>
-                                  </div>
-                                )}
-                                {resource.barCrafting?.hasSecondaryResource && resource.barCrafting?.secondaryResource && (
-                                  <>
-                                    <span>+</span>
-                                    <div className="flex items-center">
-                                      <span>{resource.barCrafting.secondaryResource.quantityPerBar}x {resource.barCrafting.secondaryResource.name}</span>
-                                    </div>
-                                  </>
-                                )}
-                                <ArrowRight className="h-3 w-3 mx-1" />
-                                <span>1x {resource.name}</span>
-                              </div>
                               
-                              {resource.quantity > 1 && (
-                                <div className="mt-1 p-1 bg-muted/20 rounded text-xs">
-                                  <div className="font-medium">Pour {resource.quantity} {resource.name}:</div>
-                                  <div>
-                                    - {resource.quantity * (resource.barCrafting?.primaryResource?.quantityPerBar || 1)}x {resource.barCrafting?.primaryResource?.name || "ressource"}
-                                  </div>
-                                  {resource.barCrafting?.hasSecondaryResource && resource.barCrafting?.secondaryResource && (
-                                    <div>
-                                      - {resource.quantity * (resource.barCrafting?.secondaryResource?.quantityPerBar || 1)}x {resource.barCrafting?.secondaryResource?.name || "ressource"}
-                                    </div>
-                                  )}
+                              {/* Montrer la recette de craft */}
+                              {resource.craftComponents && resource.craftComponents.length > 0 && (
+                                <div className="flex items-center text-xs gap-1">
+                                  {resource.craftComponents.map((component, index) => (
+                                    <React.Fragment key={index}>
+                                      {index > 0 && <span>+</span>}
+                                      <div className="flex items-center">
+                                        <span>
+                                          {component.quantity / resource.quantity}x {component.name}
+                                        </span>
+                                      </div>
+                                    </React.Fragment>
+                                  ))}
+                                  <ArrowRight className="h-3 w-3 mx-1" />
+                                  <span>1x {resource.name}</span>
                                 </div>
                               )}
                               
-                              {resource.originalQuantity && resource.quantity > resource.originalQuantity && (
-                                <div className="mt-1 p-1 bg-amber-50 text-amber-800 rounded text-xs">
-                                  <div>Cumulé sur {Math.round(resource.quantity / resource.originalQuantity)} crafts</div>
+                              {/* Affichage des composants totaux nécessaires */}
+                              {resource.quantity > 1 && resource.craftComponents && resource.craftComponents.length > 0 && (
+                                <div className="mt-1 p-1 bg-muted/20 rounded text-xs">
+                                  <div className="font-medium">Pour {resource.quantity} {resource.name}:</div>
+                                  {resource.craftComponents.map((component, index) => (
+                                    <div key={index}>
+                                      - {component.quantity}x {component.name}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Afficher les informations de ratio */}
+                              {resource.craftRatio && (
+                                <div className="mt-1 p-1 bg-muted/20 rounded text-xs">
+                                  <div className="font-medium mb-1">
+                                    Proportions des composants:
+                                  </div>
+                                  <div>
+                                    {resource.craftRatio.primaryPerBar}x {resource.craftRatio.primaryName} + 
+                                    {resource.craftRatio.secondaryPerBar}x {resource.craftRatio.secondaryName} = 
+                                    1x {resource.name}
+                                  </div>
                                 </div>
                               )}
                             </div>
-                          ) : "-"}
+                          )}
+                          
+                          {/* N'afficher AUCUNE information d'utilisation sur les matières premières */}
+                          {!resource.isCraftable && "-"}
                         </TableCell>
                         <TableCell className="text-right">{resource.quantity}</TableCell>
                       </TableRow>
