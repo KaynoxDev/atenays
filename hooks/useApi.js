@@ -12,16 +12,22 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  t
+  imeout: 15000, // Add global timeout to avoid infinite loading
 });
 
 // Utility for GET requests with React hook
-export function useGet(url, initialData = null) {
+export function useGet(url, initialData = null, options = {}) {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [requestCount, setRequestCount] = useState(0);
+  
   // Add null check for URL to prevent "startsWith" errors
   const sanitizedUrl = url ? (url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`) : null;
+  
+  // Timeout handling
+  const timeout = options.timeout || 15000;
 
   const fetchData = useCallback(async () => {
     // Skip if URL is null
@@ -30,41 +36,67 @@ export function useGet(url, initialData = null) {
       return;
     }
     
+    // Create a timeout controller for the request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeout);
+    
     try {
       setLoading(true);
-      const response = await api.get(sanitizedUrl);
+      console.log(`Fetching data from ${sanitizedUrl} (attempt ${requestCount + 1})`);
+      
+      const response = await api.get(sanitizedUrl, {
+        signal: controller.signal,
+      });
+      
+      console.log(`Data received from ${sanitizedUrl}:`, Array.isArray(response.data) ? `${response.data.length} items` : 'object');
       setData(response.data);
       setError(null);
     } catch (err) {
-      console.error(`Error fetching data from ${sanitizedUrl}:`, err);
-      setError(err);
-      setData(initialData);
+      if (err.name === 'AbortError' || err.code === 'ECONNABORTED') {
+        console.error(`Request timeout for ${sanitizedUrl}`);
+        setError(new Error('Request timed out. Please try again later.'));
+      } else {
+        console.error(`Error fetching data from ${sanitizedUrl}:`, err);
+        setError(err);
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
-  }, [sanitizedUrl, initialData]);
+  }, [sanitizedUrl, timeout, requestCount]);
 
   useEffect(() => {
     // Only fetch if we have a valid URL
-    if (sanitizedUrl) fetchData();
-    else setLoading(false);
+    if (sanitizedUrl) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
   }, [sanitizedUrl, fetchData]);
+  
+  const refetch = useCallback(() => {
+    setRequestCount(prev => prev + 1);
+    return fetchData();
+  }, [fetchData]);
 
   return { 
     data, 
     loading, 
     error, 
-    refetch: fetchData 
+    refetch 
   };
 }
 
-// POST utility using useCallback to ensure stable function reference
+// POST utility
 export const apiPost = async (url, data) => {
   // Add null check for URL
   if (!url) throw new Error('URL is required for API call');
   
   const sanitizedUrl = url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`;
   try {
+    console.log(`Posting to ${sanitizedUrl}`);
     const response = await api.post(sanitizedUrl, data);
     return response.data;
   } catch (err) {
@@ -81,6 +113,7 @@ export const apiPut = async (url, data) => {
   
   const sanitizedUrl = url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`;
   try {
+    console.log(`Putting to ${sanitizedUrl}`);
     const response = await api.put(sanitizedUrl, data);
     return response.data;
   } catch (err) {
@@ -97,6 +130,7 @@ export const apiDelete = async (url) => {
   
   const sanitizedUrl = url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`;
   try {
+    console.log(`Deleting ${sanitizedUrl}`);
     const response = await api.delete(sanitizedUrl);
     return response.data;
   } catch (err) {

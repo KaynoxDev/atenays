@@ -89,24 +89,37 @@ export async function DELETE(request, { params }) {
   try {
     const id = await params.id;
     
-    // Better validation of ObjectId
-    if (!id || !ObjectId.isValid(id)) {
+    // Validate that the ID is a valid MongoDB ObjectId
+    if (!ObjectId.isValid(id)) {
       console.error(`Invalid ObjectId format: ${id}`);
       return NextResponse.json({ error: 'Invalid order ID format' }, { status: 400 });
     }
-    
+
     const { db } = await connectToDatabase();
     
     console.log(`Deleting order: ${id}`);
-    const result = await db.collection('orders').deleteOne({ _id: new ObjectId(id) });
     
-    if (result.deletedCount === 0) {
+    // First check if the order exists
+    const order = await db.collection('orders').findOne({ _id: new ObjectId(id) });
+    
+    if (!order) {
       console.log(`Order not found for deletion: ${id}`);
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
     
+    // Delete the order
+    const result = await db.collection('orders').deleteOne({ _id: new ObjectId(id) });
+    
+    if (result.deletedCount === 0) {
+      console.log(`Failed to delete order: ${id}`);
+      return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 });
+    }
+    
     console.log(`Successfully deleted order: ${id}`);
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: `Order ${id} successfully deleted`
+    });
   } catch (error) {
     console.error(`Error deleting order: ${error.message}`);
     console.error(error.stack);
