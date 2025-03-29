@@ -4,25 +4,14 @@ import {
   Page, 
   Text, 
   View, 
-  StyleSheet, 
-  Image, 
-  Font 
+  StyleSheet
 } from '@react-pdf/renderer';
-
-// Enregistrer les polices
-Font.register({
-  family: 'Roboto',
-  fonts: [
-    { src: 'https://cdn.jsdelivr.net/npm/roboto-font@0.1.0/fonts/Roboto-Regular.ttf', fontWeight: 'normal' },
-    { src: 'https://cdn.jsdelivr.net/npm/roboto-font@0.1.0/fonts/Roboto-Bold.ttf', fontWeight: 'bold' }
-  ]
-});
 
 // Définir les styles
 const styles = StyleSheet.create({
   page: {
     padding: 30,
-    fontFamily: 'Roboto',
+    fontFamily: 'Helvetica',
     fontSize: 12,
     lineHeight: 1.5,
     color: '#333',
@@ -31,10 +20,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderBottom: '1px solid #ddd',
     paddingBottom: 10,
-  },
-  logo: {
-    width: 80,
-    marginBottom: 10,
   },
   title: {
     fontSize: 24,
@@ -147,22 +132,9 @@ const styles = StyleSheet.create({
 });
 
 // Composant principal pour le PDF de la commande
-export const OrderPDF = ({ order = {} }) => {
-  if (!order || typeof order !== 'object') {
-    // Safe fallback if order is not provided
-    return (
-      <Document>
-        <Page size="A4" style={styles.page}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Erreur</Text>
-            <Text>Données de commande non disponibles</Text>
-          </View>
-        </Page>
-      </Document>
-    );
-  }
-  
-  // Ensure all properties exist with fallbacks
+export function OrderPDF({ order }) {
+  // Safe default values
+  const safeOrder = order || {};
   const {
     _id = '',
     clientName = 'Client non spécifié',
@@ -174,18 +146,14 @@ export const OrderPDF = ({ order = {} }) => {
     price = 0,
     initialPayment = 0,
     professions = []
-  } = order;
+  } = safeOrder;
   
   // Formatter les dates
   const formatDate = (dateString) => {
     try {
       if (!dateString) return 'N/A';
       const date = new Date(dateString);
-      return new Intl.DateTimeFormat('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      }).format(date);
+      return date.toLocaleDateString('fr-FR');
     } catch(e) {
       return 'Date invalide';
     }
@@ -213,13 +181,16 @@ export const OrderPDF = ({ order = {} }) => {
     return translations[statusValue] || statusValue;
   };
 
+  // S'assurer que professions est un tableau
+  const safeProfessions = Array.isArray(professions) ? professions : [];
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* En-tête */}
         <View style={styles.header}>
           <Text style={styles.title}>Aténays - Détails de commande</Text>
-          <Text style={styles.orderNumber}>Commande #{_id?.substring(0, 8)}</Text>
+          <Text style={styles.orderNumber}>Commande #{_id?.substring(0, 8) || 'N/A'}</Text>
           <View style={[styles.statusBadge, getStatusStyle()]}>
             <Text>{getStatusName(status)}</Text>
           </View>
@@ -255,22 +226,13 @@ export const OrderPDF = ({ order = {} }) => {
             <Text style={[styles.tableCell, styles.col3]}>Prix</Text>
           </View>
           
-          {Array.isArray(professions) && professions.map((prof, idx) => (
-            <View key={idx} style={styles.tableRow}>
-              <Text style={[styles.tableCell, styles.col1]}>{prof.name}</Text>
-              <Text style={[styles.tableCell, styles.col2]}>1-{prof.levelRange}</Text>
-              <Text style={[styles.tableCell, styles.col3]}>{prof.price} or</Text>
+          {safeProfessions.map((prof, idx) => (
+            <View key={`prof-${idx}`} style={styles.tableRow}>
+              <Text style={[styles.tableCell, styles.col1]}>{prof.name || 'N/A'}</Text>
+              <Text style={[styles.tableCell, styles.col2]}>1-{prof.levelRange || '525'}</Text>
+              <Text style={[styles.tableCell, styles.col3]}>{prof.price || 0} or</Text>
             </View>
           ))}
-          
-          {/* Pour la compatibilité avec l'ancien format */}
-          {!Array.isArray(professions) && order.profession && (
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableCell, styles.col1]}>{order.profession}</Text>
-              <Text style={[styles.tableCell, styles.col2]}>1-{order.levelRange || '525'}</Text>
-              <Text style={[styles.tableCell, styles.col3]}>{order.price} or</Text>
-            </View>
-          )}
           
           <View style={styles.totalRow}>
             <Text style={[styles.tableCell, styles.col1]}></Text>
@@ -300,7 +262,9 @@ export const OrderPDF = ({ order = {} }) => {
         {notes && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notes</Text>
-            <Text style={styles.notes}>{notes}</Text>
+            <View style={styles.notes}>
+              <Text>{notes}</Text>
+            </View>
           </View>
         )}
         
@@ -311,6 +275,7 @@ export const OrderPDF = ({ order = {} }) => {
       </Page>
     </Document>
   );
-};
+}
 
+// Export pour être utilisé de différentes façons
 export default OrderPDF;

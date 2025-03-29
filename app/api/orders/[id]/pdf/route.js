@@ -1,15 +1,6 @@
 import { NextResponse } from 'next/server';
-// Cette directive est nécessaire pour l'export statique
 export const dynamic = "force-dynamic";
 
-// Cette fonction est nécessaire pour l'export statique des routes dynamiques
-export async function generateStaticParams() {
-  // Pour l'export statique, nous retournons un tableau vide
-  // car ces routes seront gérées par le serveur API externe
-  return [];
-}
-
-import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { connectToDatabase } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
@@ -51,10 +42,11 @@ export async function GET(request, { params }) {
     const filename = `commande_${plainOrder._id.substring(0, 8)}.pdf`;
     
     try {
-      // FIXED: Pass the OrderPDF component directly with props instead of using React.createElement
-      const buffer = await renderToBuffer(
-        <OrderPDF order={plainOrder} />
-      );
+      // Import the React component for PDF rendering
+      const { OrderPDF } = await import('@/components/ui/OrderPDF');
+      
+      // Create the PDF using the component with proper props
+      const buffer = await renderToBuffer(OrderPDF({ order: plainOrder }));
       
       // Retourner le PDF comme une réponse avec le bon Content-Type et Content-Disposition
       return new NextResponse(buffer, {
@@ -68,14 +60,14 @@ export async function GET(request, { params }) {
       console.error('Error rendering PDF:', renderError);
       return NextResponse.json({ 
         error: `PDF rendering failed: ${renderError.message}`,
-        stack: process.env.NODE_ENV === 'production' ? renderError.stack : undefined
+        stack: process.env.NODE_ENV === 'development' ? renderError.stack : undefined
       }, { status: 500 });
     }
   } catch (error) {
     console.error('Error generating PDF:', error);
     return NextResponse.json({ 
       error: error.message,
-      stack: process.env.NODE_ENV === 'production' ? error.stack : undefined
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });
   }
 }
