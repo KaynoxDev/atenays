@@ -51,9 +51,9 @@ export async function GET(request, { params }) {
     const filename = `commande_${plainOrder._id.substring(0, 8)}.pdf`;
     
     try {
-      // Use renderToBuffer instead of renderToStream for better compatibility
+      // FIXED: Pass the OrderPDF component directly with props instead of using React.createElement
       const buffer = await renderToBuffer(
-        React.createElement(OrderPDF, { order: plainOrder })
+        <OrderPDF order={plainOrder} />
       );
       
       // Retourner le PDF comme une réponse avec le bon Content-Type et Content-Disposition
