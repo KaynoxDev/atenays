@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
+// Désactiver les logs en production
+const ENABLE_DEBUG_LOGS = process.env.NODE_ENV !== 'production';
+
 export async function middleware(request) {
-  console.log('Middleware executing for path:', request.nextUrl.pathname);
+  // Utiliser une fonction de log conditionnelle
+  const log = (...args) => {
+    if (ENABLE_DEBUG_LOGS) {
+      console.log(...args);
+    }
+  };
+  
+  log('Middleware executing for path:', request.nextUrl.pathname);
   
   // Liste des pages publiques (accessibles sans connexion)
   const publicPages = ['/login', '/register'];
@@ -28,17 +38,17 @@ export async function middleware(request) {
     isPublicPage || 
     isPublicApi
   ) {
-    console.log('Public resource or page, allowing access');
+    log('Public resource or page, allowing access');
     return NextResponse.next();
   }
   
   // Récupérer le token d'authentification
   const token = request.cookies.get('auth_token')?.value;
-  console.log('Auth token found:', !!token);
+  log('Auth token found:', !!token);
   
   // Si aucun token, rediriger vers la page de connexion
   if (!token) {
-    console.log('No auth token, redirecting to login');
+    log('No auth token, redirecting to login');
     const loginUrl = new URL('/login', request.url);
     // Ajouter la redirection après la connexion
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname);
@@ -52,11 +62,11 @@ export async function middleware(request) {
     );
     
     const { payload } = await jwtVerify(token, secret);
-    console.log('Token verified, user:', payload.username);
+    log('Token verified, user:', payload.username);
     
     // Si l'utilisateur est connecté et essaie d'accéder à la page de connexion, le rediriger vers la page d'accueil
     if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') {
-      console.log('User already logged in and accessing login page, redirecting to home');
+      log('User already logged in and accessing login page, redirecting to home');
       return NextResponse.redirect(new URL('/', request.url));
     }
     
@@ -66,7 +76,7 @@ export async function middleware(request) {
     requestHeaders.set('x-user-role', payload.role);
     
     // Continuer la requête avec les en-têtes modifiés
-    console.log('User authenticated, continuing request');
+    log('User authenticated, continuing request');
     return NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -74,7 +84,7 @@ export async function middleware(request) {
     });
   } catch (error) {
     // Token invalide, rediriger vers la connexion
-    console.error('Invalid token:', error.message);
+    log('Invalid token:', error.message);
     const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
