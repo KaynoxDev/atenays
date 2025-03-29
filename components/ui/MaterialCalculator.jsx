@@ -20,7 +20,10 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
   
   // Chargement des matériaux depuis l'API
   const { data: materials = [], loading: loadingMaterials, error, refetch } = 
-    useGet(`/api/materials?profession=${encodeURIComponent(profession)}&levelRange=${levelRange}`);
+    useGet(`/api/materials?profession=${encodeURIComponent(profession || '')}&levelRange=${levelRange}`);
+  
+  // Ensure materials is always an array
+  const safeMaterials = Array.isArray(materials) ? materials : [];
   
   // Charger les données
   const handleRefresh = () => {
@@ -28,7 +31,7 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
   };
   
   // Filtrer les matériaux
-  const filteredMaterials = materials.filter(material => {
+  const filteredMaterials = safeMaterials.filter(material => {
     // Filtre de recherche
     if (searchTerm && !material.name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
@@ -196,7 +199,7 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
       {/* En-tête avec le nom de la profession */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">{profession}</h2>
+          <h2 className="text-2xl font-bold">{profession || 'Métier non spécifié'}</h2>
           <p className="text-muted-foreground">Calculez les matériaux nécessaires pour ce métier</p>
         </div>
         <Button variant="outline" onClick={handleRefresh} disabled={loadingMaterials}>

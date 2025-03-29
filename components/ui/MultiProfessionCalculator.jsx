@@ -19,21 +19,34 @@ export default function MultiProfessionCalculator() {
   const { data: professions = [], loading: loadingProfessions } = useGet('/api/professions');
   const { toast } = useToast();
   
+  // Ensure professions is always an array, even if API returns null or undefined
+  const safeProfessions = Array.isArray(professions) ? professions : [];
+  
   // Sélection des professions
   const [selectedProfessions, setSelectedProfessions] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   
   // Effet pour définir l'onglet actif lors du chargement des professions
   useEffect(() => {
-    if (professions?.length > 0 && selectedProfessions.length === 0) {
+    if (safeProfessions.length > 0 && selectedProfessions.length === 0) {
       // Ne pas auto-sélectionner, laisser l'utilisateur choisir
       setActiveTab(null);
     }
-  }, [professions]);
+  }, [safeProfessions, selectedProfessions.length]);
   
   // Ajouter une profession
   const handleAddProfession = (profName, levelRange = '525') => {
-    // Éviter les doublons 
+    // Avoid operations on null/undefined values
+    if (!profName) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un métier valide.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Éviter les doublons - use safeProfessions instead of professions
     if (selectedProfessions.some(p => p.name === profName && p.levelRange === levelRange)) {
       toast({
         title: "Profession déjà ajoutée",
@@ -98,12 +111,12 @@ export default function MultiProfessionCalculator() {
                   </SelectTrigger>
                   <SelectContent>
                     {loadingProfessions ? (
-                      <SelectItem value="none" disabled>Chargement des métiers...</SelectItem>
-                    ) : professions.length === 0 ? (
+                      <SelectItem value="loading" disabled>Chargement des métiers...</SelectItem>
+                    ) : safeProfessions.length === 0 ? (
                       <SelectItem value="none" disabled>Aucun métier disponible</SelectItem>
                     ) : (
-                      professions.map(profession => (
-                        <SelectItem key={profession._id} value={profession.name}>
+                      safeProfessions.map(profession => (
+                        <SelectItem key={profession._id || `prof-${Math.random()}`} value={profession.name}>
                           {profession.icon} {profession.name}
                         </SelectItem>
                       ))
