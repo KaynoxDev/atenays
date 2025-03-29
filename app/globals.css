@@ -1,7 +1,7 @@
 @import "tailwindcss";
-@import "tailwincss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Professional Accounting Color Palette */
 @layer base {
