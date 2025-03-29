@@ -139,6 +139,10 @@ export default function AddMaterialPage() {
   const filteredPrimaryMaterials = useMemo(() => {
     console.log("Filtrage des ressources avec terme:", primarySearch);
     
+    if (!Array.isArray(allMaterials)) {
+      return [];
+    }
+    
     if (primarySearch.length === 0 && !primarySearchFocused) return [];
     
     // Filtrer les matériaux
@@ -185,6 +189,10 @@ export default function AddMaterialPage() {
 
   // Ressource secondaire - recherche filtrée améliorée (même logique)
   const filteredSecondaryMaterials = useMemo(() => {
+    if (!Array.isArray(allMaterials)) {
+      return [];
+    }
+    
     if (secondarySearch.length === 0 && !secondarySearchFocused) return [];
     
     return allMaterials
@@ -226,6 +234,7 @@ export default function AddMaterialPage() {
   // Obtenir le nom d'une catégorie par ID
   const getCategoryName = (categoryId) => {
     if (!categoryId) return 'Non catégorisé';
+    if (!Array.isArray(categories)) return 'Catégorie inconnue';
     const category = categories.find(c => c._id === categoryId);
     return category ? category.name : 'Catégorie inconnue';
   };
@@ -490,7 +499,7 @@ export default function AddMaterialPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Non catégorisé</SelectItem>
-                      {categories.map(category => (
+                      {Array.isArray(categories) && categories.map(category => (
                         <SelectItem key={category._id} value={category._id}>
                           {category.icon && <span className="mr-2">{category.icon}</span>}
                           {category.name}
@@ -511,7 +520,7 @@ export default function AddMaterialPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Aucune profession</SelectItem>
-                      {professions.map(profession => (
+                      {Array.isArray(professions) && professions.map(profession => (
                         <SelectItem key={profession._id} value={profession.name}>
                           {profession.icon && <span className="mr-2">{profession.icon}</span>}
                           {profession.name}
@@ -603,7 +612,7 @@ export default function AddMaterialPage() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="">Toutes les catégories</SelectItem>
-                                    {categories.map(category => (
+                                    {Array.isArray(categories) && categories.map(category => (
                                       <SelectItem key={category._id} value={category._id}>
                                         {category.icon && <span className="mr-2">{category.icon}</span>}
                                         {category.name}
@@ -624,7 +633,7 @@ export default function AddMaterialPage() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="">Toutes les professions</SelectItem>
-                                    {professions.map(profession => (
+                                    {Array.isArray(professions) && professions.map(profession => (
                                       <SelectItem key={profession._id} value={profession.name}>
                                         {profession.icon && <span className="mr-2">{profession.icon}</span>}
                                         {profession.name}
@@ -833,7 +842,7 @@ export default function AddMaterialPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="">Toutes les catégories</SelectItem>
-                                      {categories.map(category => (
+                                      {Array.isArray(categories) && categories.map(category => (
                                         <SelectItem key={category._id} value={category._id}>
                                           {category.icon && <span className="mr-2">{category.icon}</span>}
                                           {category.name}
@@ -854,7 +863,7 @@ export default function AddMaterialPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="">Toutes les professions</SelectItem>
-                                      {professions.map(profession => (
+                                      {Array.isArray(professions) && professions.map(profession => (
                                         <SelectItem key={profession._id} value={profession.name}>
                                           {profession.icon && <span className="mr-2">{profession.icon}</span>}
                                           {profession.name}
