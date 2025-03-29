@@ -12,8 +12,7 @@ export default function OrderStatusUpdate({ orderId, currentStatus, onStatusChan
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   
-  // Utiliser useCallback pour la fonction d'update pour éviter les références changeantes
-  const updateStatus = useCallback(async () => {
+  const handleUpdateStatus = async () => {
     if (status === currentStatus || !orderId) return;
     
     setIsUpdating(true);
@@ -39,7 +38,7 @@ export default function OrderStatusUpdate({ orderId, currentStatus, onStatusChan
     } finally {
       setIsUpdating(false);
     }
-  }, [orderId, status, currentStatus, onStatusChange, toast]);
+  };
 
   // Noms des statuts pour l'affichage
   const getStatusName = (statusValue) => {
@@ -67,7 +66,7 @@ export default function OrderStatusUpdate({ orderId, currentStatus, onStatusChan
       </Select>
       
       <Button 
-        onClick={updateStatus} 
+        onClick={handleUpdateStatus}
         disabled={status === currentStatus || isUpdating}
         variant="secondary"
         size="sm"

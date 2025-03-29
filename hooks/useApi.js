@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 // Base API URL configuration
@@ -23,7 +23,7 @@ export function useGet(url, initialData = null) {
   // Add null check for URL to prevent "startsWith" errors
   const sanitizedUrl = url ? (url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`) : null;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     // Skip if URL is null
     if (!sanitizedUrl) {
       setLoading(false);
@@ -42,19 +42,24 @@ export function useGet(url, initialData = null) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sanitizedUrl, initialData]);
 
   useEffect(() => {
     // Only fetch if we have a valid URL
     if (sanitizedUrl) fetchData();
     else setLoading(false);
-  }, [sanitizedUrl]);
+  }, [sanitizedUrl, fetchData]);
 
-  return { data, loading, error, refetch: fetchData };
+  return { 
+    data, 
+    loading, 
+    error, 
+    refetch: fetchData 
+  };
 }
 
-// POST utility
-export async function apiPost(url, data) {
+// POST utility using useCallback to ensure stable function reference
+export const apiPost = async (url, data) => {
   // Add null check for URL
   if (!url) throw new Error('URL is required for API call');
   
@@ -67,10 +72,10 @@ export async function apiPost(url, data) {
     console.error('Response data:', err.response?.data);
     throw err;
   }
-}
+};
 
 // PUT utility
-export async function apiPut(url, data) {
+export const apiPut = async (url, data) => {
   // Add null check for URL
   if (!url) throw new Error('URL is required for API call');
   
@@ -83,10 +88,10 @@ export async function apiPut(url, data) {
     console.error('Response data:', err.response?.data);
     throw err;
   }
-}
+};
 
 // DELETE utility
-export async function apiDelete(url) {
+export const apiDelete = async (url) => {
   // Add null check for URL
   if (!url) throw new Error('URL is required for API call');
   
@@ -99,6 +104,6 @@ export async function apiDelete(url) {
     console.error('Response data:', err.response?.data);
     throw err;
   }
-}
+};
 
 export default api;

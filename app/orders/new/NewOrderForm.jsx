@@ -173,13 +173,14 @@ export default function NewOrderForm() {
       : ['525'];
   };
   
+  // Fonction soumission du formulaire corrigée
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
       // Validation de base
       if (!order.clientId) {
-        showError({
+        toast({
           title: "Client requis",
           description: "Veuillez sélectionner un client."
         });
@@ -216,18 +217,22 @@ export default function NewOrderForm() {
         }))
       };
       
-      const createdOrder = await apiPost('/api/orders', newOrder);
+      const result = await apiPost('/api/orders', newOrder);
       
-      success({
+      toast({
         title: "Commande créée",
         description: "La commande a été créée avec succès."
       });
       
       // Rediriger vers la page de détails de la commande
-      router.push(`/orders/${createdOrder._id}`);
+      if (result && result._id) {
+        router.push(`/orders/${result._id}`);
+      } else {
+        router.push('/orders');
+      }
     } catch (err) {
       console.error('Erreur lors de la création de la commande:', err);
-      showError({
+      toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la création de la commande."
       });
