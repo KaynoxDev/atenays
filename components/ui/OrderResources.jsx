@@ -47,69 +47,120 @@ export default function OrderResources({ order, professions, checkedResources = 
         
         const results = await Promise.all(promises);
         
-        // Transformer les résultats en liste de ressources plates avec des métadonnées
-        const allResources = [];
-        const craftableResources = [];
+        // Objet pour suivre les ressources cumulées par nom
+        const resourcesMap = new Map();
+        const craftableResourcesMap = new Map();
         
-        // Premier passage pour collecter toutes les ressources
+        // Premier passage : collecter et cumuler toutes les ressources
         results.forEach(profMaterials => {
           profMaterials.materials.forEach(material => {
-            // Utilisez l'ID comme identifiant unique, ou générez-en un si non disponible
-            const resourceId = material._id || `${material.name}-${profMaterials.profession}`;
+            const materialName = material.name;
+            const resourceId = material._id || `${materialName}-${profMaterials.profession}`;
             
             const resourceWithMeta = {
               ...material,
               id: resourceId,
               profession: profMaterials.profession,
               levelRange: profMaterials.levelRange,
-              isCraftable: material.isBar && material.barCrafting
+              isCraftable: material.isBar && material.barCrafting,
+              originalQuantity: material.quantity || 1
             };
             
-            allResources.push(resourceWithMeta);
-            
-            // Si c'est un matériau craftable, on le stocke pour traitement ultérieur
+            // Stocker les ressources craftables séparément pour traitement ultérieur
             if (resourceWithMeta.isCraftable) {
-              craftableResources.push(resourceWithMeta);
+              if (craftableResourcesMap.has(materialName)) {
+                // Cumuler les quantités pour les ressources identiques
+                const existing = craftableResourcesMap.get(materialName);
+                existing.quantity = (existing.quantity || 1) + (material.quantity || 1);
+                
+                // Ajouter la profession si elle ne l'est pas déjà
+                if (!existing.professions.includes(profMaterials.profession)) {
+                  existing.professions.push(profMaterials.profession);
+                }
+              } else {
+                // Nouvelle ressource craftable
+                resourceWithMeta.professions = [profMaterials.profession];
+                craftableResourcesMap.set(materialName, resourceWithMeta);
+              }
+            } else {
+              // Ressources non-craftables
+              if (resourcesMap.has(materialName)) {
+                // Cumuler les quantités pour les ressources identiques
+                const existing = resourcesMap.get(materialName);
+                existing.quantity = (existing.quantity || 1) + (material.quantity || 1);
+                
+                // Ajouter la profession si elle ne l'est pas déjà
+                if (!existing.professions) existing.professions = [existing.profession];
+                if (!existing.professions.includes(profMaterials.profession)) {
+                  existing.professions.push(profMaterials.profession);
+                }
+              } else {
+                // Nouvelle ressource
+                resourceWithMeta.professions = [profMaterials.profession];
+                resourcesMap.set(materialName, resourceWithMeta);
+              }
             }
           });
         });
         
-        // Deuxième passage pour ajouter les relations de craft
+        // Convertir les Maps en arrays
+        const allResources = [...resourcesMap.values()];
+        const craftableResources = [...craftableResourcesMap.values()];
+        
+        // Deuxième passage pour ajouter les relations de craft avec quantités cumulées
         craftableResources.forEach(craftable => {
           // Traiter la ressource primaire
           if (craftable.barCrafting.primaryResource && craftable.barCrafting.primaryResource.name) {
             const primary = craftable.barCrafting.primaryResource;
+            const primaryName = primary.name;
             
             // Trouver si la ressource primaire est déjà dans notre liste
             const existingPrimary = allResources.find(r => 
-              r.name.toLowerCase() === primary.name.toLowerCase()
+              r.name.toLowerCase() === primaryName.toLowerCase()
             );
+            
+            // Calculer la quantité totale nécessaire pour tous les craftables
+            const totalQuantityNeeded = craftable.quantity * (primary.quantityPerBar || 1);
             
             if (existingPrimary) {
               // Ajouter l'info que cette ressource est utilisée dans un craft
               if (!existingPrimary.usedIn) existingPrimary.usedIn = [];
-              existingPrimary.usedIn.push({
-                outputId: craftable.id,
-                outputName: craftable.name,
-                quantityNeeded: primary.quantityPerBar || 1,
-                iconName: craftable.iconName
-              });
+              
+              // Vérifier si ce craftable est déjà référencé
+              const existingUsage = existingPrimary.usedIn.find(u => u.outputName === craftable.name);
+              
+              if (existingUsage) {
+                // Cumuler la quantité nécessaire
+                existingUsage.quantityNeeded += totalQuantityNeeded;
+                existingUsage.instances = (existingUsage.instances || 1) + 1;
+              } else {
+                // Ajouter une nouvelle référence
+                existingPrimary.usedIn.push({
+                  outputId: craftable.id,
+                  outputName: craftable.name,
+                  quantityNeeded: totalQuantityNeeded,
+                  iconName: craftable.iconName,
+                  instances: 1 // Nombre d'instances de ce craft
+                });
+              }
             } else {
               // Ajouter comme nouvelle ressource
-              const newResourceId = primary.materialId || `${primary.name}-resource`;
+              const newResourceId = primary.materialId || `${primaryName}-resource`;
               const newResource = {
                 id: newResourceId,
-                name: primary.name,
+                name: primaryName,
                 iconName: primary.iconName,
-                quantity: primary.quantityPerBar || 1,
+                quantity: totalQuantityNeeded,
                 isPrimaryResource: true,
                 profession: craftable.profession,
+                professions: craftable.professions,
                 levelRange: craftable.levelRange,
                 usedIn: [{
                   outputId: craftable.id,
                   outputName: craftable.name,
-                  quantityNeeded: primary.quantityPerBar || 1,
-                  iconName: craftable.iconName
+                  quantityNeeded: totalQuantityNeeded,
+                  iconName: craftable.iconName,
+                  instances: 1
                 }]
               };
               
@@ -117,45 +168,63 @@ export default function OrderResources({ order, professions, checkedResources = 
             }
           }
           
-          // Traiter la ressource secondaire si elle existe
+          // Même logique pour les ressources secondaires
           if (craftable.barCrafting.hasSecondaryResource && 
               craftable.barCrafting.secondaryResource && 
               craftable.barCrafting.secondaryResource.name) {
             
             const secondary = craftable.barCrafting.secondaryResource;
+            const secondaryName = secondary.name;
+            
+            // Calculer la quantité totale nécessaire pour tous les craftables
+            const totalQuantityNeeded = craftable.quantity * (secondary.quantityPerBar || 1);
             
             // Vérifier si cette ressource existe déjà
             const existingSecondary = allResources.find(r => 
-              r.name.toLowerCase() === secondary.name.toLowerCase()
+              r.name.toLowerCase() === secondaryName.toLowerCase()
             );
             
             if (existingSecondary) {
               // Ajouter l'info que cette ressource est utilisée dans un craft
               if (!existingSecondary.usedIn) existingSecondary.usedIn = [];
-              existingSecondary.usedIn.push({
-                outputId: craftable.id,
-                outputName: craftable.name,
-                quantityNeeded: secondary.quantityPerBar || 1,
-                iconName: craftable.iconName,
-                isSecondaryResource: true
-              });
+              
+              // Vérifier si ce craftable est déjà référencé
+              const existingUsage = existingSecondary.usedIn.find(u => u.outputName === craftable.name);
+              
+              if (existingUsage) {
+                // Cumuler la quantité nécessaire
+                existingUsage.quantityNeeded += totalQuantityNeeded;
+                existingUsage.instances = (existingUsage.instances || 1) + 1;
+              } else {
+                // Ajouter une nouvelle référence
+                existingSecondary.usedIn.push({
+                  outputId: craftable.id,
+                  outputName: craftable.name,
+                  quantityNeeded: totalQuantityNeeded,
+                  iconName: craftable.iconName,
+                  isSecondaryResource: true,
+                  instances: 1
+                });
+              }
             } else {
               // Ajouter comme nouvelle ressource
-              const newResourceId = secondary.materialId || `${secondary.name}-resource`;
+              const newResourceId = secondary.materialId || `${secondaryName}-resource`;
               const newResource = {
                 id: newResourceId,
-                name: secondary.name,
+                name: secondaryName,
                 iconName: secondary.iconName,
-                quantity: secondary.quantityPerBar || 1,
+                quantity: totalQuantityNeeded,
                 isSecondaryResource: true,
                 profession: craftable.profession,
+                professions: craftable.professions,
                 levelRange: craftable.levelRange,
                 usedIn: [{
                   outputId: craftable.id,
                   outputName: craftable.name,
-                  quantityNeeded: secondary.quantityPerBar || 1,
+                  quantityNeeded: totalQuantityNeeded,
                   iconName: craftable.iconName,
-                  isSecondaryResource: true
+                  isSecondaryResource: true,
+                  instances: 1
                 }]
               };
               
@@ -249,7 +318,7 @@ export default function OrderResources({ order, professions, checkedResources = 
           <div>
             <CardTitle>Ressources à collecter</CardTitle>
             <CardDescription>
-              Liste des ressources nécessaires pour cette commande
+              Liste des ressources nécessaires pour cette commande (quantités cumulées)
             </CardDescription>
           </div>
           
@@ -335,7 +404,15 @@ export default function OrderResources({ order, professions, checkedResources = 
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{resource.profession}</Badge>
+                          {resource.professions && resource.professions.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {resource.professions.map((prof, idx) => (
+                                <Badge key={idx} variant="outline">{prof}</Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <Badge variant="outline">{resource.profession}</Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           {resource.usedIn && resource.usedIn.length > 0 ? (
@@ -356,13 +433,17 @@ export default function OrderResources({ order, professions, checkedResources = 
                                     />
                                   )}
                                   <span>{usage.outputName}</span>
+                                  {usage.instances > 1 && (
+                                    <Badge className="ml-1 px-1 py-0 h-4 text-[0.6rem]" variant="outline">
+                                      x{usage.instances}
+                                    </Badge>
+                                  )}
                                   {usage.isSecondaryResource && (
                                     <Badge className="ml-1 px-1 py-0 h-4 text-[0.6rem]" variant="secondary">Secondaire</Badge>
                                   )}
                                 </div>
                               ))}
                               
-                              {/* Modify the crafting ratio explanation to make it clearer */}
                               {resource.craftRatio && (
                                 <div className="mt-1 p-1 bg-muted/20 rounded text-xs">
                                   {resource.usedIn && resource.usedIn[0] && (
@@ -389,7 +470,6 @@ export default function OrderResources({ order, professions, checkedResources = 
                             </div>
                           ) : resource.isCraftable ? (
                             <div className="flex flex-col gap-1">
-                              {/* Improve the display for craftable items to clearly show recipe */}
                               <div className="text-xs text-muted-foreground">
                                 <span className="font-medium">Recette:</span>
                               </div>
@@ -411,7 +491,6 @@ export default function OrderResources({ order, professions, checkedResources = 
                                 <span>1x {resource.name}</span>
                               </div>
                               
-                              {/* Calculer et afficher combien de matériaux primaires et secondaires sont nécessaires */}
                               {resource.quantity > 1 && (
                                 <div className="mt-1 p-1 bg-muted/20 rounded text-xs">
                                   <div className="font-medium">Pour {resource.quantity} {resource.name}:</div>
@@ -423,6 +502,12 @@ export default function OrderResources({ order, professions, checkedResources = 
                                       - {resource.quantity * (resource.barCrafting?.secondaryResource?.quantityPerBar || 1)}x {resource.barCrafting?.secondaryResource?.name || "ressource"}
                                     </div>
                                   )}
+                                </div>
+                              )}
+                              
+                              {resource.originalQuantity && resource.quantity > resource.originalQuantity && (
+                                <div className="mt-1 p-1 bg-amber-50 text-amber-800 rounded text-xs">
+                                  <div>Cumulé sur {Math.round(resource.quantity / resource.originalQuantity)} crafts</div>
                                 </div>
                               )}
                             </div>
