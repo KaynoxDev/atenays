@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useGet } from '@/hooks/useApi';
 import { Badge } from '@/components/ui/badge';
