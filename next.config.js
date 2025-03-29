@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Supprimez la propriété 'output: export' pour permettre à Vercel de gérer le rendu
-  // Supprimez aussi disableApiRoutes car Vercel supporte nativement les routes API
+  // Allow environment variables to be used
+  env: {
+    MONGODB_URI: process.env.MONGODB_URI,
+    MONGODB_DB: process.env.MONGODB_DB,
+    JWT_SECRET: process.env.JWT_SECRET,
+    ADMIN_REGISTER_KEY: process.env.ADMIN_REGISTER_KEY,
+  },
   
   // Conservez ces options pour ignorer les erreurs
   eslint: {
