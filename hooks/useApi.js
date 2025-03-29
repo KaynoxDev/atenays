@@ -12,8 +12,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  t
-  imeout: 15000, // Add global timeout to avoid infinite loading
+  timeout: 15000, // Add global timeout to avoid infinite loading
 });
 
 // Utility for GET requests with React hook
