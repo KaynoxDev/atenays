@@ -301,7 +301,10 @@ export default function OrderResources({ order, professions, checkedResources = 
                     {resources.map((resource) => (
                       <TableRow 
                         key={resource.id} 
-                        className={checkedResources[resource.id] ? "bg-green-50 dark:bg-green-950/20" : ""}
+                        className={`
+                          ${checkedResources[resource.id] ? "bg-green-50 dark:bg-green-950/20" : ""}
+                          ${resource.isPrimaryResource || resource.isSecondaryResource ? "bg-blue-50/50 dark:bg-blue-950/10" : ""}
+                        `}
                       >
                         <TableCell>
                           <Checkbox 
@@ -325,6 +328,9 @@ export default function OrderResources({ order, professions, checkedResources = 
                             {resource.name}
                             {resource.isCraftable && (
                               <Badge className="ml-2" variant="outline">Craftable</Badge>
+                            )}
+                            {(resource.isPrimaryResource || resource.isSecondaryResource) && (
+                              <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800">Auto-généré</Badge>
                             )}
                           </div>
                         </TableCell>

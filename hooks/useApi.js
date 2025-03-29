@@ -20,11 +20,16 @@ export function useGet(url, initialData = null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Remove the leading '/api' if the URL already starts with it
-  // This prevents double /api/api/ paths
-  const sanitizedUrl = url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`;
+  // Add null check for URL to prevent "startsWith" errors
+  const sanitizedUrl = url ? (url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`) : null;
 
   const fetchData = async () => {
+    // Skip if URL is null
+    if (!sanitizedUrl) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await api.get(sanitizedUrl);
@@ -40,14 +45,19 @@ export function useGet(url, initialData = null) {
   };
 
   useEffect(() => {
-    if (url) fetchData();
-  }, [url]);
+    // Only fetch if we have a valid URL
+    if (sanitizedUrl) fetchData();
+    else setLoading(false);
+  }, [sanitizedUrl]);
 
   return { data, loading, error, refetch: fetchData };
 }
 
 // POST utility
 export async function apiPost(url, data) {
+  // Add null check for URL
+  if (!url) throw new Error('URL is required for API call');
+  
   const sanitizedUrl = url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`;
   try {
     const response = await api.post(sanitizedUrl, data);
@@ -61,6 +71,9 @@ export async function apiPost(url, data) {
 
 // PUT utility
 export async function apiPut(url, data) {
+  // Add null check for URL
+  if (!url) throw new Error('URL is required for API call');
+  
   const sanitizedUrl = url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`;
   try {
     const response = await api.put(sanitizedUrl, data);
@@ -74,6 +87,9 @@ export async function apiPut(url, data) {
 
 // DELETE utility
 export async function apiDelete(url) {
+  // Add null check for URL
+  if (!url) throw new Error('URL is required for API call');
+  
   const sanitizedUrl = url.startsWith('/api/') ? url : url.startsWith('/') ? url : `/${url}`;
   try {
     const response = await api.delete(sanitizedUrl);
