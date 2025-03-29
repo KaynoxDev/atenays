@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "framework": "nextjs",
-  "outputDirectory": ".next",
-  "env": {
-    "MONGODB_URI": "mongodb+srv://username:password@datacluster.b56cwu5.mongodb.net/",
-    "MONGODB_DB": "atenays"
-  }
-}
