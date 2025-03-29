@@ -2,59 +2,71 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 
-// Cette directive est nécessaire pour l'export statique
-export const dynamic = "force-static";
-
-// Cette fonction est nécessaire pour l'export statique des routes dynamiques
-export async function generateStaticParams() {
-  // Pour l'export statique, nous retournons un tableau vide
-  // car ces routes seront gérées par le serveur API externe
-  return [];
-}
+// Force dynamic API routes for proper handling on Vercel
+export const dynamic = "force-dynamic";
 
 export async function GET(request, { params }) {
   try {
+    // Extract the client ID from params
     const id = await params.id;
     
-    // Validate ID format before attempting to use it
-    if (!id || !ObjectId.isValid(id)) {
-      return NextResponse.json({ 
-        error: `Invalid client ID format: ${id}. Expected a 24-character hex string.` 
-      }, { status: 400 });
+    // Validate that the ID is a valid MongoDB ObjectId
+    if (!ObjectId.isValid(id)) {
+      console.error(`Invalid ObjectId format: ${id}`);
+      return NextResponse.json({ error: 'Invalid client ID format' }, { status: 400 });
     }
-    
+
     const { db } = await connectToDatabase();
+    
+    console.log(`Fetching client with ID: ${id}`);
+    
     const client = await db.collection('clients').findOne({ _id: new ObjectId(id) });
     
     if (!client) {
+      console.log(`Client not found: ${id}`);
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
     
-    return NextResponse.json(client);
+    // Return the client data with proper serialization
+    return NextResponse.json({
+      ...client,
+      _id: client._id.toString() // Ensure _id is properly serialized
+    });
   } catch (error) {
-    console.error('Error in clients GET by ID:', error);
+    console.error(`Error fetching client: ${error.message}`);
+    console.error(error.stack);
     return NextResponse.json({ 
-      error: error.message || 'Internal Server Error',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: 'An error occurred while fetching the client',
+      details: process.env.NODE_ENV !== 'production' ? error.message : undefined
     }, { status: 500 });
   }
 }
 
+// PUT handler for updating a client
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
-    const { db } = await connectToDatabase();
+    const id = await params.id;
     
-    const updatedData = await request.json();
-    
-    // S'assurer que _id n'est pas présent dans les données de mise à jour
-    if (updatedData._id) {
-      delete updatedData._id;
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid client ID format' }, { status: 400 });
     }
+    
+    const { db } = await connectToDatabase();
+    const updateData = await request.json();
+    
+    console.log(`Updating client ${id} with:`, updateData);
+    
+    // Remove _id from update data if present to avoid MongoDB errors
+    if (updateData._id) {
+      delete updateData._id;
+    }
+    
+    // Add updated timestamp
+    updateData.updatedAt = new Date().toISOString();
     
     const result = await db.collection('clients').updateOne(
       { _id: new ObjectId(id) },
-      { $set: updatedData }
+      { $set: updateData }
     );
     
     if (result.matchedCount === 0) {
@@ -63,16 +75,38 @@ export async function PUT(request, { params }) {
     
     const updatedClient = await db.collection('clients').findOne({ _id: new ObjectId(id) });
     
-    return NextResponse.json(updatedClient);
+    return NextResponse.json({
+      ...updatedClient,
+      _id: updatedClient._id.toString()
+    });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(`Error updating client: ${error.message}`);
+    return NextResponse.json({ 
+      error: 'An error occurred while updating the client',
+      details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+    }, { status: 500 });
   }
 }
 
+// DELETE handler for removing a client
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const id = await params.id;
+    
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid client ID format' }, { status: 400 });
+    }
+    
     const { db } = await connectToDatabase();
+    
+    // Check if there are any orders associated with this client
+    const ordersCount = await db.collection('orders').countDocuments({ clientId: id });
+    
+    if (ordersCount > 0) {
+      return NextResponse.json({
+        error: `Cannot delete client with ${ordersCount} associated orders. Delete the orders first or reassign them.`
+      }, { status: 400 });
+    }
     
     const result = await db.collection('clients').deleteOne({ _id: new ObjectId(id) });
     
@@ -80,8 +114,15 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
     
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: 'Client deleted successfully' 
+    });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(`Error deleting client: ${error.message}`);
+    return NextResponse.json({ 
+      error: 'An error occurred while deleting the client',
+      details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+    }, { status: 500 });
   }
 }
