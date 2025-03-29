@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 // Cette directive est nécessaire pour l'export statique
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 // Cette fonction est nécessaire pour l'export statique des routes dynamiques
 export async function generateStaticParams() {
