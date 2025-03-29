@@ -498,7 +498,7 @@ export default function AddMaterialPage() {
                       <SelectValue placeholder="Sélectionner une catégorie" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Non catégorisé</SelectItem>
+                      <SelectItem value="none">Non catégorisé</SelectItem>
                       {Array.isArray(categories) && categories.map(category => (
                         <SelectItem key={category._id} value={category._id}>
                           {category.icon && <span className="mr-2">{category.icon}</span>}
@@ -519,7 +519,7 @@ export default function AddMaterialPage() {
                       <SelectValue placeholder="Sélectionner une profession" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Aucune profession</SelectItem>
+                      <SelectItem value="none">Aucune profession</SelectItem>
                       {Array.isArray(professions) && professions.map(profession => (
                         <SelectItem key={profession._id} value={profession.name}>
                           {profession.icon && <span className="mr-2">{profession.icon}</span>}
@@ -611,7 +611,7 @@ export default function AddMaterialPage() {
                                     <SelectValue placeholder="Toutes les catégories" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="">Toutes les catégories</SelectItem>
+                                    <SelectItem value="all">Toutes les catégories</SelectItem>
                                     {Array.isArray(categories) && categories.map(category => (
                                       <SelectItem key={category._id} value={category._id}>
                                         {category.icon && <span className="mr-2">{category.icon}</span>}
@@ -632,7 +632,7 @@ export default function AddMaterialPage() {
                                     <SelectValue placeholder="Toutes les professions" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="">Toutes les professions</SelectItem>
+                                    <SelectItem value="all">Toutes les professions</SelectItem>
                                     {Array.isArray(professions) && professions.map(profession => (
                                       <SelectItem key={profession._id} value={profession.name}>
                                         {profession.icon && <span className="mr-2">{profession.icon}</span>}
@@ -841,7 +841,7 @@ export default function AddMaterialPage() {
                                       <SelectValue placeholder="Toutes les catégories" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="">Toutes les catégories</SelectItem>
+                                      <SelectItem value="all">Toutes les catégories</SelectItem>
                                       {Array.isArray(categories) && categories.map(category => (
                                         <SelectItem key={category._id} value={category._id}>
                                           {category.icon && <span className="mr-2">{category.icon}</span>}
@@ -862,7 +862,7 @@ export default function AddMaterialPage() {
                                       <SelectValue placeholder="Toutes les professions" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="">Toutes les professions</SelectItem>
+                                      <SelectItem value="all">Toutes les professions</SelectItem>
                                       {Array.isArray(professions) && professions.map(profession => (
                                         <SelectItem key={profession._id} value={profession.name}>
                                           {profession.icon && <span className="mr-2">{profession.icon}</span>}

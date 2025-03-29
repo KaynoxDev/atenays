@@ -98,9 +98,9 @@ export default function MultiProfessionCalculator() {
                   </SelectTrigger>
                   <SelectContent>
                     {loadingProfessions ? (
-                      <SelectItem value="" disabled>Chargement des métiers...</SelectItem>
+                      <SelectItem value="none" disabled>Chargement des métiers...</SelectItem>
                     ) : professions.length === 0 ? (
-                      <SelectItem value="" disabled>Aucun métier disponible</SelectItem>
+                      <SelectItem value="none" disabled>Aucun métier disponible</SelectItem>
                     ) : (
                       professions.map(profession => (
                         <SelectItem key={profession._id} value={profession.name}>
