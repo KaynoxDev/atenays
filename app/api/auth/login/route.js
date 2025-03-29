@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-// Cette directive est nécessaire pour l'export statique
-export const dynamic = "force-static";
 
 import { SignJWT } from 'jose';
 import { connectToDatabase } from '@/lib/mongodb';

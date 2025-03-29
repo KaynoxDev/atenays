@@ -50,3 +50,5 @@
     ExpiresByType text/javascript "access plus 1 month"
     ExpiresByType application/javascript "access plus 1 month"
 </IfModule>
+
+# Ce fichier n'est pas utilisé sur Vercel et peut être supprimé
