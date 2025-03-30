@@ -131,8 +131,9 @@ const styles = StyleSheet.create({
   },
 });
 
-// Composant principal pour le PDF de la commande
-export const OrderPDF = ({ order }) => {
+// Create and export the Document component directly
+// This is a critical change for React-PDF compatibility
+const OrderPDF = ({ order }) => {
   // Safe default values
   const safeOrder = order || {};
   const {
@@ -277,5 +278,5 @@ export const OrderPDF = ({ order }) => {
   );
 };
 
-// IMPORTANT: Export as a named export AND a default export for compatibility
+// Export as default only - this is important for React-PDF compatibility
 export default OrderPDF;

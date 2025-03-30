@@ -41,22 +41,15 @@ export async function GET(request, { params }) {
     const filename = `commande_${plainOrder._id.substring(0, 8)}.pdf`;
     
     try {
-      // Import dynamically with a clear variable name to avoid confusion
-      const OrderPDFModule = await import('@/components/ui/OrderPDF');
-      const OrderPDFComponent = OrderPDFModule.default || OrderPDFModule.OrderPDF;
+      // Simplified import approach - just get the default export
+      const OrderPDF = (await import('@/components/ui/OrderPDF')).default;
       
-      if (!OrderPDFComponent) {
-        throw new Error('OrderPDF component not found in import');
+      if (!OrderPDF) {
+        throw new Error('Failed to load OrderPDF component');
       }
       
-      console.log('OrderPDF component loaded successfully');
-      
-      // Create the element with React.createElement
-      const element = React.createElement(OrderPDFComponent, { order: plainOrder });
-      
-      // Debug the element
-      console.log('React element created:', 
-        element && typeof element === 'object' ? 'Valid React element' : 'Invalid element');
+      // Create a proper React element using createElement
+      const element = React.createElement(OrderPDF, { order: plainOrder });
       
       // Render to buffer
       const buffer = await renderToBuffer(element);
@@ -73,11 +66,9 @@ export async function GET(request, { params }) {
       console.error('Error rendering PDF:', renderError);
       console.error('Error details:', renderError.stack);
       
-      // Try to provide more debugging information
       return NextResponse.json({ 
         error: `PDF rendering failed: ${renderError.message}`,
         stack: renderError.stack,
-        componentType: typeof (await import('@/components/ui/OrderPDF')).default
       }, { status: 500 });
     }
   } catch (error) {
