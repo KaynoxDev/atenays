@@ -63,7 +63,8 @@ export default function AddMaterialPage() {
         iconName: '',
         quantityPerBar: 0
       },
-      hasSecondaryResource: false
+      hasSecondaryResource: false,
+      craftAlternatives: [] // Liste d'alternatives de craft
     }
   });
   
@@ -342,22 +343,26 @@ export default function AddMaterialPage() {
   
   // Ajouter une nouvelle alternative de craft
   const addCraftAlternative = () => {
-    setCraftAlternatives(prev => [...prev, {
+    const newAlternative = {
+      id: Date.now(), // ID unique pour cette alternative
       primaryResource: {
         name: '',
         materialId: '',
         iconName: '',
         quantityPerBar: 1
       },
-      hasSecondaryResource: false,
       secondaryResource: {
         name: '',
         materialId: '',
         iconName: '',
-        quantityPerBar: 0
+        quantityPerBar: 1
       },
-      isPreferred: false
-    }]);
+      hasSecondaryResource: false,
+      isPreferred: false, // Indique si c'est l'alternative préférée
+      outputQuantity: material.barCrafting.outputQuantity || 1 // Par défaut, même quantité que la méthode principale
+    };
+    
+    setCraftAlternatives(prev => [...prev, newAlternative]);
   };
   
   // Supprimer une alternative de craft
@@ -369,13 +374,26 @@ export default function AddMaterialPage() {
   const updateCraftAlternative = (index, field, value) => {
     setCraftAlternatives(prev => {
       const updated = [...prev];
+      
+      // Gérer les champs imbriqués avec la notation dot
       if (field.includes('.')) {
         const [parent, child] = field.split('.');
         updated[index][parent][child] = value;
       } else {
         updated[index][field] = value;
       }
+      
       return updated;
+    });
+  };
+  
+  // Sélectionner une ressource pour une alternative
+  const selectAlternativeResource = (index, resourceType, resource) => {
+    updateCraftAlternative(index, `${resourceType}`, {
+      name: resource.name,
+      materialId: resource._id,
+      iconName: resource.iconName || '',
+      quantityPerBar: 1
     });
   };
   
