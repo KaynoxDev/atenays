@@ -13,7 +13,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export default function MultiProfessionCalculator() {
   // Charger les professions depuis l'API
   const { data: professions = [], loading: loadingProfessions } = useGet('/api/professions');
-  const { toast } = useToast();
   
   // Ensure professions is always an array, even if API returns null or undefined
   const safeProfessions = Array.isArray(professions) ? professions : [];
@@ -34,11 +33,7 @@ export default function MultiProfessionCalculator() {
   const handleAddProfession = (profName, levelRange = '525') => {
     // Avoid operations on null/undefined values
     if (!profName) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner un métier valide.",
-        variant: "destructive"
-      });
+      console.log("Erreur: Veuillez sélectionner un métier valide.");
       return;
     }
     
@@ -51,10 +46,7 @@ export default function MultiProfessionCalculator() {
     setSelectedProfessions(prev => [...prev, newProf]);
     setActiveTab(`profession-${selectedProfessions.length}`);
     
-    toast({
-      title: "Profession ajoutée",
-      description: `${profName} (niveau ${levelRange}) a été ajoutée au calculateur.`
-    });
+    console.log(`Profession ajoutée: ${profName} (niveau ${levelRange}) a été ajoutée au calculateur.`);
   };
   
   // Supprimer une profession
