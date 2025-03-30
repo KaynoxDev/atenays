@@ -336,6 +336,48 @@ export default function AddMaterialPage() {
       }
     }));
   };
+
+  // État pour les alternatives de craft
+  const [craftAlternatives, setCraftAlternatives] = useState([]);
+  
+  // Ajouter une nouvelle alternative de craft
+  const addCraftAlternative = () => {
+    setCraftAlternatives(prev => [...prev, {
+      primaryResource: {
+        name: '',
+        materialId: '',
+        iconName: '',
+        quantityPerBar: 1
+      },
+      hasSecondaryResource: false,
+      secondaryResource: {
+        name: '',
+        materialId: '',
+        iconName: '',
+        quantityPerBar: 0
+      },
+      isPreferred: false
+    }]);
+  };
+  
+  // Supprimer une alternative de craft
+  const removeCraftAlternative = (index) => {
+    setCraftAlternatives(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Mettre à jour une alternative de craft
+  const updateCraftAlternative = (index, field, value) => {
+    setCraftAlternatives(prev => {
+      const updated = [...prev];
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        updated[index][parent][child] = value;
+      } else {
+        updated[index][field] = value;
+      }
+      return updated;
+    });
+  };
   
   // Soumettre le formulaire
   const handleSubmit = async (e) => {
@@ -377,6 +419,16 @@ export default function AddMaterialPage() {
         // S'assurer que professions est bien un tableau
         professions: materialProfessions,
         // ...other properties
+        // Ajouter les alternatives de craft si elles existent
+        barCrafting: {
+          ...material.barCrafting,
+          craftAlternatives: craftAlternatives.map(alt => ({
+            primaryResource: alt.primaryResource,
+            hasSecondaryResource: alt.hasSecondaryResource,
+            secondaryResource: alt.hasSecondaryResource ? alt.secondaryResource : null,
+            isPreferred: alt.isPreferred
+          }))
+        }
       };
       
       await apiPost('/api/materials', materialToSubmit);
@@ -1080,6 +1132,105 @@ export default function AddMaterialPage() {
                   </div>
                 </div>
               )}
+              
+              {/* Section pour les alternatives de craft */}
+              <div className="space-y-3 bg-amber-50/50 p-4 rounded-md border border-amber-100 mt-6">
+                <h3 className="text-base font-medium text-black flex items-center">
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-amber-100 text-amber-800 text-sm mr-2">+</span>
+                  Alternatives de craft (optionnelles)
+                </h3>
+                
+                <p className="text-sm text-amber-800">
+                  Vous pouvez définir des options de craft alternatives pour cette ressource.
+                  Par exemple, si le matériau peut être crafté avec différentes ressources.
+                </p>
+                
+                {craftAlternatives.length > 0 && (
+                  <div className="space-y-6 mt-4 divide-y divide-amber-200">
+                    {craftAlternatives.map((alternative, index) => (
+                      <div key={index} className="pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium">Alternative #{index + 1}</h4>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => removeCraftAlternative(index)}
+                            className="h-8 text-destructive hover:text-destructive"
+                          >
+                            Supprimer
+                          </Button>
+                        </div>
+                        
+                        {/* Composant similaire à la section de ressource principale */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-3 rounded-md border border-gray-200">
+                          {/* Même structure que pour la ressource principale et secondaire, mais pour l'alternative */}
+                          <div className="space-y-2">
+                            <Label className="text-black">Ressource principale</Label>
+                            {/* ...champ de recherche similaire... */}
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`altPrimaryIcon-${index}`} className="text-black">Icône</Label>
+                            <Input 
+                              id={`altPrimaryIcon-${index}`}
+                              value={alternative.primaryResource.iconName}
+                              onChange={(e) => updateCraftAlternative(index, 'primaryResource.iconName', e.target.value)}
+                              placeholder="inv_ore_copper_01"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`altPrimaryQty-${index}`} className="text-black">Quantité</Label>
+                            <Input 
+                              id={`altPrimaryQty-${index}`}
+                              type="number"
+                              min="1"
+                              value={alternative.primaryResource.quantityPerBar}
+                              onChange={(e) => updateCraftAlternative(index, 'primaryResource.quantityPerBar', parseInt(e.target.value) || 1)}
+                              placeholder="1"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Option pour activer ressource secondaire */}
+                        <div className="flex items-center space-x-2 mt-3 mb-2">
+                          <Switch 
+                            checked={alternative.hasSecondaryResource}
+                            onCheckedChange={(checked) => updateCraftAlternative(index, 'hasSecondaryResource', checked)}
+                          />
+                          <Label className="text-black">Ajouter une ressource secondaire</Label>
+                        </div>
+                        
+                        {alternative.hasSecondaryResource && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-3 rounded-md border border-gray-200">
+                            {/* ...champs pour la ressource secondaire alternative... */}
+                          </div>
+                        )}
+                        
+                        {/* Option pour marquer cette alternative comme préférée */}
+                        <div className="flex items-center space-x-2 mt-4 bg-amber-50 p-2 rounded">
+                          <Switch 
+                            checked={alternative.isPreferred}
+                            onCheckedChange={(checked) => updateCraftAlternative(index, 'isPreferred', checked)}
+                          />
+                          <Label className="text-amber-900">Marquer comme alternative préférée</Label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addCraftAlternative}
+                  className="mt-3 border-amber-300 text-amber-800 hover:bg-amber-50"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter une alternative de craft
+                </Button>
+              </div>
               
               {/* Aperçu - version simplifiée et légère */}
               <div className="p-4 bg-white border rounded-md">

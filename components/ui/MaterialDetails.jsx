@@ -51,58 +51,187 @@ export default function MaterialDetails({ material }) {
                 </div>
               </div>
               
-              {/* Ressources nécessaires avec quantités mises en évidence */}
-              <div className="grid grid-cols-1 gap-3">
-                {material.barCrafting.primaryResource && (
-                  <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Ressource principale:</span>
-                      <Badge variant="outline" className="text-base px-3">
-                        {material.barCrafting.primaryResource.quantityPerBar || 1} unités
-                      </Badge>
+              {/* Afficher les alternatives de craft si elles existent */}
+              {material.barCrafting.craftAlternatives && material.barCrafting.craftAlternatives.length > 0 ? (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-blue-700">Options de craft disponibles:</h4>
+                  
+                  {/* Option primaire (par défaut) */}
+                  <div className="p-3 bg-blue-50/50 rounded-md border border-blue-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">Option par défaut</span>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">Recommandée</Badge>
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      {material.barCrafting.primaryResource.iconName && (
-                        <img
-                          src={`https://wow.zamimg.com/images/wow/icons/small/${material.barCrafting.primaryResource.iconName.toLowerCase()}.jpg`}
-                          alt={material.barCrafting.primaryResource.name}
-                          className="w-6 h-6 rounded"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
-                          }}
-                        />
+                    <div className="grid grid-cols-1 gap-3">
+                      {/* Ressource principale */}
+                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Ressource principale:</span>
+                          <Badge variant="outline" className="text-base px-3">
+                            {material.barCrafting.primaryResource.quantityPerBar || 1} unités
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          {material.barCrafting.primaryResource.iconName && (
+                            <img
+                              src={`https://wow.zamimg.com/images/wow/icons/small/${material.barCrafting.primaryResource.iconName.toLowerCase()}.jpg`}
+                              alt={material.barCrafting.primaryResource.name}
+                              className="w-6 h-6 rounded"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                              }}
+                            />
+                          )}
+                          <span>{material.barCrafting.primaryResource.name}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Ressource secondaire si présente */}
+                      {material.barCrafting.hasSecondaryResource && material.barCrafting.secondaryResource && (
+                        <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">Ressource secondaire:</span>
+                            <Badge variant="outline" className="text-base px-3">
+                              {material.barCrafting.secondaryResource.quantityPerBar || 1} unités
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            {material.barCrafting.secondaryResource.iconName && (
+                              <img
+                                src={`https://wow.zamimg.com/images/wow/icons/small/${material.barCrafting.secondaryResource.iconName.toLowerCase()}.jpg`}
+                                alt={material.barCrafting.secondaryResource.name}
+                                className="w-6 h-6 rounded"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                                }}
+                              />
+                            )}
+                            <span>{material.barCrafting.secondaryResource.name}</span>
+                          </div>
+                        </div>
                       )}
-                      <span>{material.barCrafting.primaryResource.name}</span>
                     </div>
                   </div>
-                )}
-                
-                {material.barCrafting.hasSecondaryResource && material.barCrafting.secondaryResource && (
-                  <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Ressource secondaire:</span>
-                      <Badge variant="outline" className="text-base px-3">
-                        {material.barCrafting.secondaryResource.quantityPerBar || 1} unités
-                      </Badge>
+                  
+                  {/* Alternatives de craft */}
+                  {material.barCrafting.craftAlternatives.map((alternative, index) => (
+                    <div key={index} className="p-3 bg-gray-50/70 rounded-md border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium">Alternative {index + 1}</span>
+                        {alternative.isPreferred && (
+                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Alternative préférée</Badge>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 gap-3">
+                        {/* Ressource principale alternative */}
+                        <div className="p-3 bg-white rounded-md border border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">Ressource principale:</span>
+                            <Badge variant="outline" className="text-base px-3">
+                              {alternative.primaryResource.quantityPerBar || 1} unités
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            {alternative.primaryResource.iconName && (
+                              <img
+                                src={`https://wow.zamimg.com/images/wow/icons/small/${alternative.primaryResource.iconName.toLowerCase()}.jpg`}
+                                alt={alternative.primaryResource.name}
+                                className="w-6 h-6 rounded"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                                }}
+                              />
+                            )}
+                            <span>{alternative.primaryResource.name}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Ressource secondaire alternative si présente */}
+                        {alternative.hasSecondaryResource && alternative.secondaryResource && (
+                          <div className="p-3 bg-white rounded-md border border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">Ressource secondaire:</span>
+                              <Badge variant="outline" className="text-base px-3">
+                                {alternative.secondaryResource.quantityPerBar || 1} unités
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              {alternative.secondaryResource.iconName && (
+                                <img
+                                  src={`https://wow.zamimg.com/images/wow/icons/small/${alternative.secondaryResource.iconName.toLowerCase()}.jpg`}
+                                  alt={alternative.secondaryResource.name}
+                                  className="w-6 h-6 rounded"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                                  }}
+                                />
+                              )}
+                              <span>{alternative.secondaryResource.name}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      {material.barCrafting.secondaryResource.iconName && (
-                        <img
-                          src={`https://wow.zamimg.com/images/wow/icons/small/${material.barCrafting.secondaryResource.iconName.toLowerCase()}.jpg`}
-                          alt={material.barCrafting.secondaryResource.name}
-                          className="w-6 h-6 rounded"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
-                          }}
-                        />
-                      )}
-                      <span>{material.barCrafting.secondaryResource.name}</span>
+                  ))}
+                </div>
+              ) : (
+                // Version précédente avec une seule option de craft
+                <div className="grid grid-cols-1 gap-3">
+                  {material.barCrafting.primaryResource && (
+                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">Ressource principale:</span>
+                        <Badge variant="outline" className="text-base px-3">
+                          {material.barCrafting.primaryResource.quantityPerBar || 1} unités
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {material.barCrafting.primaryResource.iconName && (
+                          <img
+                            src={`https://wow.zamimg.com/images/wow/icons/small/${material.barCrafting.primaryResource.iconName.toLowerCase()}.jpg`}
+                            alt={material.barCrafting.primaryResource.name}
+                            className="w-6 h-6 rounded"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                            }}
+                          />
+                        )}
+                        <span>{material.barCrafting.primaryResource.name}</span>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                  
+                  {material.barCrafting.hasSecondaryResource && material.barCrafting.secondaryResource && (
+                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">Ressource secondaire:</span>
+                        <Badge variant="outline" className="text-base px-3">
+                          {material.barCrafting.secondaryResource.quantityPerBar || 1} unités
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {material.barCrafting.secondaryResource.iconName && (
+                          <img
+                            src={`https://wow.zamimg.com/images/wow/icons/small/${material.barCrafting.secondaryResource.iconName.toLowerCase()}.jpg`}
+                            alt={material.barCrafting.secondaryResource.name}
+                            className="w-6 h-6 rounded"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                            }}
+                          />
+                        )}
+                        <span>{material.barCrafting.secondaryResource.name}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Résumé de la recette */}
               <div className="mt-4 p-3 bg-green-50 rounded-md text-sm border border-green-100">

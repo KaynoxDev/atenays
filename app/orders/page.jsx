@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useGet, apiDelete } from '@/hooks/useApi';
 import { Badge } from '@/components/ui/badge';
-import { FilePlus, Search, RefreshCw, ArrowUpDown, Filter, Trash2, AlertCircle } from 'lucide-react';
+import { FilePlus, Search, RefreshCw, ArrowUpDown, Filter, Trash2, AlertCircle, Layers } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -182,13 +182,21 @@ export default function OrdersPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-primary">Commandes</h1>
-          <p className="text-muted-foreground">Gestion des commandes clients</p>
+          <p className="text-muted-foreground">
+            Gérez les commandes et leurs statuts
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleRefresh} disabled={loading || forceReload}>
             <RefreshCw className={`h-4 w-4 mr-2 ${(loading || forceReload) ? 'animate-spin' : ''}`} />
             Actualiser
           </Button>
+          <Link href="/order-groups">
+            <Button variant="outline">
+              <Layers className="h-4 w-4 mr-2" />
+              Groupes
+            </Button>
+          </Link>
           <Link href="/orders/new">
             <Button>
               <FilePlus className="h-4 w-4 mr-2" />
