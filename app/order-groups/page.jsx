@@ -170,6 +170,12 @@ export default function OrderGroupsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Link href={`/order-groups/${group._id}/edit`}>
+                          <Button variant="outline" size="sm" className="h-8">
+                            <Edit className="h-4 w-4 mr-1" />
+                            Éditer
+                          </Button>
+                        </Link>
                         <Link href={`/order-groups/${group._id}/resources`}>
                           <Button variant="outline" size="sm" className="h-8">
                             <Calculator className="h-4 w-4 mr-1" />
