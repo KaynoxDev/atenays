@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { apiPut } from '@/hooks/useApi';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Calendar, Edit, Save, CheckCircle2, FileText, Clock, Check, AlertTriangle, Ban } from 'lucide-react';
+import { AlertCircle, Calendar, Edit, Save, CheckCircle2, FileText, Clock, Check, AlertTriangle, Ban, Printer } from 'lucide-react';
 import OrderGroupSelector from '@/components/ui/OrderGroupSelector';
+import Link from 'next/link';
 
 export default function OrderDetails({ order, onUpdateOrder, onUpdateStatus }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -99,7 +100,7 @@ export default function OrderDetails({ order, onUpdateOrder, onUpdateStatus }) {
         });
       });
     } catch (err) {
-      console.error('Erreur lors de l\'enregistrement du paiement:', err);
+      console.error('Erreur lors de l'enregistrement du paiement:', err);
       showError({
         title: "Échec de l'enregistrement",
         description: "Une erreur est survenue lors de l'enregistrement du paiement."
@@ -219,20 +220,6 @@ export default function OrderDetails({ order, onUpdateOrder, onUpdateStatus }) {
     return translations[status] || status;
   }
 
-  const handleDownloadPDF = async () => {
-    try {
-      // Ouvrir le PDF dans un nouvel onglet
-      window.open(`/api/orders/${order._id}/pdf`, '_blank');
-    } catch (error) {
-      console.error('Erreur lors du téléchargement du PDF:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de générer le PDF.",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2">
@@ -296,14 +283,15 @@ export default function OrderDetails({ order, onUpdateOrder, onUpdateStatus }) {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <div>
-              <Button 
-                variant="outline" 
-                onClick={handleDownloadPDF}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Télécharger en PDF
-              </Button>
+            <div className="flex items-center gap-2">
+              <OrderGroupSelector order={order} />
+              {/* Modifier le bouton PDF pour ouvrir la page d'impression au lieu de télécharger un PDF */}
+              <Link href={`/orders/${order._id}/print`} target="_blank">
+                <Button variant="outline" size="sm">
+                  <Printer className="h-4 w-4 mr-2" /> {/* Utiliser l'icône Printer au lieu de FilePdf */}
+                  Imprimer
+                </Button>
+              </Link>
             </div>
             
             {/* Boutons existants */}
