@@ -115,25 +115,55 @@ const styles = StyleSheet.create({
   },
 });
 
+// Validation helper function
+const sanitizeData = (order) => {
+  if (!order) {
+    return {
+      _id: 'unknown',
+      clientName: 'Client non spécifié',
+      clientRealm: '',
+      character: '',
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+      notes: '',
+      price: 0,
+      initialPayment: 0,
+      professions: []
+    };
+  }
+
+  return {
+    _id: order._id || 'unknown',
+    clientName: order.clientName || 'Client non spécifié',
+    clientRealm: order.clientRealm || '',
+    character: order.character || '',
+    createdAt: order.createdAt || new Date().toISOString(),
+    status: order.status || 'pending',
+    notes: order.notes || '',
+    price: Number(order.price) || 0,
+    initialPayment: Number(order.initialPayment) || 0,
+    professions: Array.isArray(order.professions) ? order.professions : []
+  };
+};
+
 // This must be exactly as shown in the React-PDF documentation
 const OrderPDF = ({ order }) => {
-  // Use safe defaults and extract values
-  const safeOrder = order || {};
-  const {
-    _id = '',
-    clientName = 'Client non spécifié',
-    clientRealm = '',
-    character = '',
-    createdAt = new Date().toISOString(),
-    status = 'pending',
-    notes = '',
-    price = 0,
-    initialPayment = 0,
-    professions = []
-  } = safeOrder;
+  // Use safe defaults with enhanced validation
+  const safeOrder = sanitizeData(order);
   
-  // Convert professions to a safe array
-  const safeProfessions = Array.isArray(professions) ? professions : [];
+  // Destructure values from sanitized order
+  const {
+    _id,
+    clientName,
+    clientRealm,
+    character,
+    createdAt,
+    status,
+    notes,
+    price,
+    initialPayment,
+    professions
+  } = safeOrder;
   
   // Helper functions for formatting
   const formatDate = (dateString) => {
@@ -153,7 +183,7 @@ const OrderPDF = ({ order }) => {
     case 'in-progress': statusStyle = styles.statusInProgress; break;
     case 'completed': statusStyle = styles.statusCompleted; break;
     case 'cancelled': statusStyle = styles.statusCancelled; break;
-    default: statusStyle = {};
+    default: statusStyle = styles.statusPending;
   }
   
   // Status translation
@@ -163,7 +193,7 @@ const OrderPDF = ({ order }) => {
     completed: 'Terminée',
     cancelled: 'Annulée'
   };
-  const statusName = statusNames[status] || status;
+  const statusName = statusNames[status] || 'Statut inconnu';
 
   return (
     <Document>

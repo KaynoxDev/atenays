@@ -27,20 +27,22 @@ export default function EditOrderGroupPage() {
   // Récupérer les données du groupe
   const { data: group, loading: loadingGroup, error: groupError } = useGet(`/api/order-groups/${id}`);
   
-  // Récupérer toutes les commandes disponibles
+  // Récupérer toutes les commandes disponibles - ensure we have a default empty array
   const { data: allOrders = [], loading: loadingOrders } = useGet('/api/orders');
   
-  // Filtrer les commandes selon la recherche
-  const filteredOrders = allOrders.filter(order => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      order.clientName?.toLowerCase().includes(searchLower) ||
-      order.character?.toLowerCase().includes(searchLower) ||
-      order._id?.includes(searchLower)
-    );
-  });
+  // Filtrer les commandes selon la recherche - add null check with Array.isArray
+  const filteredOrders = Array.isArray(allOrders) 
+    ? allOrders.filter(order => {
+        if (!searchTerm) return true;
+        
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          order.clientName?.toLowerCase().includes(searchLower) ||
+          order.character?.toLowerCase().includes(searchLower) ||
+          order._id?.includes(searchLower)
+        );
+      })
+    : [];
   
   // Initialiser les données du groupe
   useEffect(() => {
@@ -48,16 +50,21 @@ export default function EditOrderGroupPage() {
       setGroupName(group.name || '');
       setGroupDescription(group.description || '');
       
-      // Extraire les IDs des commandes déjà dans le groupe
-      if (Array.isArray(group.orders)) {
+      // Extraire les IDs des commandes déjà dans le groupe - add additional null check
+      if (group.orders && Array.isArray(group.orders)) {
         setSelectedOrders(group.orders.map(order => order._id));
       }
     }
   }, [group]);
   
-  // Gérer la sélection/désélection d'une commande
+  // Gérer la sélection/désélection d'une commande - handle null prev state
   const toggleOrderSelection = (orderId) => {
     setSelectedOrders(prev => {
+      // If prev is null or not an array, initialize with the current order
+      if (!prev || !Array.isArray(prev)) {
+        return [orderId];
+      }
+      
       if (prev.includes(orderId)) {
         return prev.filter(id => id !== orderId);
       } else {
@@ -81,10 +88,13 @@ export default function EditOrderGroupPage() {
     
     setIsSubmitting(true);
     try {
+      // Ensure selectedOrders is an array
+      const orderIdsToSubmit = Array.isArray(selectedOrders) ? selectedOrders : [];
+      
       await apiPut(`/api/order-groups/${id}`, {
         name: groupName.trim(),
         description: groupDescription.trim(),
-        orderIds: selectedOrders
+        orderIds: orderIdsToSubmit
       });
       
       toast({
@@ -115,6 +125,9 @@ export default function EditOrderGroupPage() {
       year: 'numeric'
     });
   };
+  
+  // Safe check for empty selected orders
+  const selectedOrdersCount = Array.isArray(selectedOrders) ? selectedOrders.length : 0;
   
   return (
     <div className="container mx-auto p-4">
@@ -249,11 +262,11 @@ export default function EditOrderGroupPage() {
                         {filteredOrders.map((order) => (
                           <TableRow 
                             key={order._id} 
-                            className={selectedOrders.includes(order._id) ? "bg-primary/5" : ""}
+                            className={Array.isArray(selectedOrders) && selectedOrders.includes(order._id) ? "bg-primary/5" : ""}
                           >
                             <TableCell>
                               <Checkbox
-                                checked={selectedOrders.includes(order._id)}
+                                checked={Array.isArray(selectedOrders) && selectedOrders.includes(order._id)}
                                 onCheckedChange={() => toggleOrderSelection(order._id)}
                               />
                             </TableCell>
@@ -280,13 +293,13 @@ export default function EditOrderGroupPage() {
                 
                 <div className="flex items-center justify-between pt-4 text-sm">
                   <div>
-                    <span className="font-medium">{selectedOrders.length}</span> commandes sélectionnées
+                    <span className="font-medium">{selectedOrdersCount}</span> commandes sélectionnées
                   </div>
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => setSelectedOrders([])}
-                    disabled={selectedOrders.length === 0}
+                    disabled={selectedOrdersCount === 0}
                   >
                     Tout désélectionner
                   </Button>
