@@ -100,7 +100,7 @@ export default function OrderDetails({ order, onUpdateOrder, onUpdateStatus }) {
         });
       });
     } catch (err) {
-      console.error('Erreur lors de l'enregistrement du paiement:', err);
+      console.error("Erreur lors de l'enregistrement du paiement:", err);
       showError({
         title: "Échec de l'enregistrement",
         description: "Une erreur est survenue lors de l'enregistrement du paiement."
