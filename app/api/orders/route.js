@@ -94,16 +94,17 @@ export async function POST(request) {
     }
     
     // Add metadata
-    orderData.createdAt = orderData.createdAt || new Date().toISOString();
-    orderData.updatedAt = new Date().toISOString();
-    
-    // Make sure professions is an array
-    if (orderData.professions && !Array.isArray(orderData.professions)) {
-      orderData.professions = [];
-    }
+    const orderWithMetadata = {
+      ...orderData,
+      orderGroupId: orderData.orderGroupId || null,
+      createdAt: orderData.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      // Make sure professions is an array
+      professions: Array.isArray(orderData.professions) ? orderData.professions : [],
+    };
     
     console.log('POST /api/orders: Inserting new order');
-    const result = await db.collection('orders').insertOne(orderData);
+    const result = await db.collection('orders').insertOne(orderWithMetadata);
     
     if (!result.acknowledged) {
       throw new Error('Database insert operation failed');

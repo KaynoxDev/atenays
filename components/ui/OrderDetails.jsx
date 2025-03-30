@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { apiPut } from '@/hooks/useApi';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Calendar, Edit, Save, CheckCircle2, FileText, Clock, Check, AlertTriangle, Ban } from 'lucide-react';
+import OrderGroupSelector from '@/components/ui/OrderGroupSelector';
 
 export default function OrderDetails({ order, onUpdateOrder, onUpdateStatus }) {
   const [isEditing, setIsEditing] = useState(false);
