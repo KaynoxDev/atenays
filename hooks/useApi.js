@@ -139,4 +139,16 @@ export const apiDelete = async (url) => {
   }
 };
 
+// Check that apiGet and other functions are properly exported
+
+// If exports are missing, add or fix them like this:
+export const apiGet = async (url) => {
+  // Implementation
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.statusText}`);
+  }
+  return response.json();
+};
+
 export default api;

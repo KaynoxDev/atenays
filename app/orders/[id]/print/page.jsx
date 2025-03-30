@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { apiGet } from '@/hooks/useApi';
+import { useGet } from '@/hooks/useApi'; // Changed from apiGet to useGet
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -13,22 +13,25 @@ export default function OrderPrintPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Use the useGet hook instead of direct apiGet function
+  const { data: orderData, error: fetchError, loading: fetchLoading } = useGet(
+    id ? `/api/orders/${id}` : null
+  );
+
   useEffect(() => {
-    async function fetchOrder() {
-      try {
-        setLoading(true);
-        const data = await apiGet(`/api/orders/${id}`);
-        setOrder(data);
-      } catch (err) {
-        console.error('Error fetching order:', err);
-        setError('Failed to load order data.');
-      } finally {
-        setLoading(false);
-      }
+    if (orderData) {
+      setOrder(orderData);
+      setLoading(false);
     }
+    
+    if (fetchError) {
+      console.error('Error fetching order:', fetchError);
+      setError('Failed to load order data.');
+      setLoading(false);
+    }
+  }, [orderData, fetchError]);
 
-    fetchOrder();
-
+  useEffect(() => {
     // Auto-print when ready
     const timer = setTimeout(() => {
       if (!loading && !error && order) {
@@ -37,7 +40,7 @@ export default function OrderPrintPage() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [id]);
+  }, [loading, error, order]);
 
   // Format date
   const formatDate = (dateString) => {
@@ -67,7 +70,7 @@ export default function OrderPrintPage() {
     }
   };
 
-  if (loading) {
+  if (loading || fetchLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
