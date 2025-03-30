@@ -22,7 +22,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiPut, apiPost, useGet } from '@/hooks/useApi';
-import { UsersIcon, Layer, Plus, Loader2 } from 'lucide-react';
+// Fix: Replace Layer with Layers which exists in lucide-react
+import { UsersIcon, Layers, Plus, Loader2 } from 'lucide-react';
 
 export default function OrderGroupSelector({ order }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -140,7 +141,8 @@ export default function OrderGroupSelector({ order }) {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            <Layer className="h-4 w-4" />
+            {/* Fix: Use Layers instead of Layer */}
+            <Layers className="h-4 w-4" />
             {selectedGroupId ? currentGroupName : "Assigner à un groupe"}
           </Button>
         </DialogTrigger>
