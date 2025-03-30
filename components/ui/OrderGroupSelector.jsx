@@ -28,7 +28,7 @@ import { UsersIcon, Layers, Plus, Loader2 } from 'lucide-react';
 export default function OrderGroupSelector({ order }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState(order?.orderGroupId || '');
+  const [selectedGroupId, setSelectedGroupId] = useState(order?.orderGroupId || 'none'); // Changed from empty string to 'none'
   const [newGroupName, setNewGroupName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -48,11 +48,16 @@ export default function OrderGroupSelector({ order }) {
     
     setIsSubmitting(true);
     try {
-      await apiPut(`/api/orders/${order._id}`, { orderGroupId: groupId });
+      // Send null to the API when 'none' is selected
+      await apiPut(`/api/orders/${order._id}`, { 
+        orderGroupId: groupId === 'none' ? null : groupId 
+      });
       
       toast({
         title: "Groupe mis à jour",
-        description: "La commande a été ajoutée au groupe sélectionné."
+        description: groupId === 'none' 
+          ? "La commande a été retirée de son groupe." 
+          : "La commande a été ajoutée au groupe sélectionné."
       });
       
       setSelectedGroupId(groupId);
@@ -131,8 +136,8 @@ export default function OrderGroupSelector({ order }) {
     }
   };
   
-  // Trouver le nom du groupe actuel - Add null check
-  const currentGroupName = selectedGroupId 
+  // Trouver le nom du groupe actuel
+  const currentGroupName = selectedGroupId && selectedGroupId !== 'none'
     ? (Array.isArray(orderGroups) ? orderGroups.find(g => g._id === selectedGroupId)?.name : null) || "Groupe inconnu"
     : "Aucun groupe";
   
@@ -141,9 +146,8 @@ export default function OrderGroupSelector({ order }) {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            {/* Fix: Use Layers instead of Layer */}
             <Layers className="h-4 w-4" />
-            {selectedGroupId ? currentGroupName : "Assigner à un groupe"}
+            {selectedGroupId && selectedGroupId !== 'none' ? currentGroupName : "Assigner à un groupe"}
           </Button>
         </DialogTrigger>
         
@@ -203,7 +207,7 @@ export default function OrderGroupSelector({ order }) {
                     <SelectValue placeholder="Sélectionner un groupe" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucun groupe</SelectItem>
+                    <SelectItem value="none">Aucun groupe</SelectItem> {/* Changed from empty string to 'none' */}
                     {Array.isArray(orderGroups) && orderGroups.map((group) => (
                       <SelectItem key={group._id} value={group._id}>
                         {group.name} ({group.orderCount || 0} commandes)
@@ -227,8 +231,7 @@ export default function OrderGroupSelector({ order }) {
                     <Button 
                       variant="destructive" 
                       onClick={leaveGroup}
-                      disabled={isSubmitting || !selectedGroupId}
-                    >
+                      disabled={isSubmitting || selectedGroupId === 'none'} >
                       {isSubmitting ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : null}
@@ -243,7 +246,7 @@ export default function OrderGroupSelector({ order }) {
                     {isSubmitting ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
-                    Assigner au groupe
+                    {selectedGroupId === 'none' ? 'Retirer du groupe' : 'Assigner au groupe'}
                   </Button>
                 </div>
               </div>
