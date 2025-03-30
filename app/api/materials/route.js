@@ -75,29 +75,38 @@ async function seedAlchemyMaterials(db) {
 export async function POST(request) {
   try {
     const { db } = await connectToDatabase();
-    const material = await request.json();
+    
+    // Récupérer les données du matériau
+    const materialData = await request.json();
+    
+    // S'assurer que barCrafting.outputQuantity existe si c'est un craftable
+    if (materialData.isBar && materialData.barCrafting) {
+      if (!materialData.barCrafting.outputQuantity || materialData.barCrafting.outputQuantity < 1) {
+        materialData.barCrafting.outputQuantity = 1;
+      }
+    }
     
     // Basic validation
-    if (!material.name) {
+    if (!materialData.name) {
       return NextResponse.json({ error: 'Material name is required' }, { status: 400 });
     }
     
     // Ensure the material has proper profession data
-    if (material.usedBy && material.usedBy.length > 0) {
-      if (!material.profession) {
-        material.profession = material.usedBy[0].profession;
+    if (materialData.usedBy && materialData.usedBy.length > 0) {
+      if (!materialData.profession) {
+        materialData.profession = materialData.usedBy[0].profession;
       }
       
-      if (!material.professions) {
-        material.professions = material.usedBy.map(u => u.profession);
+      if (!materialData.professions) {
+        materialData.professions = materialData.usedBy.map(u => u.profession);
       }
     }
     
     // Add creation timestamp
-    material.createdAt = new Date();
+    materialData.createdAt = new Date();
     
     // Process the materials collection
-    const result = await db.collection('materials').insertOne(material);
+    const result = await db.collection('materials').insertOne(materialData);
     const newMaterial = await db.collection('materials').findOne({ _id: result.insertedId });
     
     // Consider seeding some Alchemy materials if none exist

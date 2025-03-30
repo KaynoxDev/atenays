@@ -121,7 +121,7 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
     );
   }, []);
   
-  // Calculer la liste totale des matériaux nécessaires avec sécurité améliorée
+  // Calculer la liste totale des matériaux nécessaires avec prise en compte de outputQuantity
   useEffect(() => {
     const calculateMaterials = () => {
       if (!Array.isArray(selectedMaterials) || selectedMaterials.length === 0) {

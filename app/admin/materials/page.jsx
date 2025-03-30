@@ -48,7 +48,8 @@ export default function AdminMaterialsPage() {
         iconName: '',
         quantityPerBar: 0
       },
-      hasSecondaryResource: false
+      hasSecondaryResource: false,
+      outputQuantity: 1 // Valeur par défaut
     }
   };
   
@@ -113,7 +114,8 @@ export default function AdminMaterialsPage() {
           iconName: '',
           quantityPerBar: 0
         },
-        hasSecondaryResource: false
+        hasSecondaryResource: false,
+        outputQuantity: 1 // Valeur par défaut
       };
     } else {
       // Ensure primaryResource exists
@@ -134,6 +136,11 @@ export default function AdminMaterialsPage() {
           iconName: '',
           quantityPerBar: 0
         };
+      }
+
+      // Ensure outputQuantity exists
+      if (!materialCopy.barCrafting.outputQuantity) {
+        materialCopy.barCrafting.outputQuantity = 1; // Valeur par défaut
       }
     }
     
@@ -727,6 +734,32 @@ export default function AdminMaterialsPage() {
                       </div>
                     </div>
                   )}
+
+                  <div className="space-y-2 border-t pt-4 mt-4">
+                    <Label htmlFor="outputQuantity">Quantité produite par craft</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="outputQuantity"
+                        type="number"
+                        min="1"
+                        value={currentMaterial.barCrafting?.outputQuantity || 1}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 1;
+                          setCurrentMaterial(prev => ({
+                            ...prev,
+                            barCrafting: {
+                              ...prev.barCrafting,
+                              outputQuantity: value > 0 ? value : 1
+                            }
+                          }));
+                        }}
+                        className="w-24"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        Nombre d'unités produites à chaque craft
+                      </span>
+                    </div>
+                  </div>
                 </TabsContent>
               )}
             </Tabs>

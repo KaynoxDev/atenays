@@ -584,32 +584,44 @@ export default function AddMaterialPage() {
           
           {material.isBar && activeSection === "crafting" && (
             <CardContent className="pt-6 space-y-6 bg-white text-black">
-              {/* Configuration générale de craft */}
-              <div className="space-y-3 bg-gray-50 p-4 rounded-md">
-                <h3 className="text-base font-medium text-black">Configuration générale</h3>
+              {/* Configuration générale de craft - Rendons cela plus visible */}
+              <div className="space-y-3 bg-blue-50/50 p-4 rounded-md border border-blue-100">
+                <h3 className="text-base font-medium text-black flex items-center">
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-800 text-sm mr-2">1</span>
+                  Configuration de production
+                </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="outputQuantity" className="text-black">Quantité produite par craft</Label>
-                    <Input
-                      id="outputQuantity"
-                      type="number"
-                      min="1"
-                      value={material.barCrafting.outputQuantity || 1}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 1;
-                        setMaterial(prev => ({
-                          ...prev,
-                          barCrafting: {
-                            ...prev.barCrafting,
-                            outputQuantity: value > 0 ? value : 1
-                          }
-                        }));
-                      }}
-                      className="bg-white text-black border-gray-300"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Le nombre d'objets produits à chaque craft (par défaut: 1)
+                    <Label htmlFor="outputQuantity" className="text-black flex items-center">
+                      Quantité produite par craft
+                      <span className="ml-2 text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Important</span>
+                    </Label>
+                    <div className="flex items-center">
+                      <Input
+                        id="outputQuantity"
+                        type="number"
+                        min="1"
+                        value={material.barCrafting.outputQuantity || 1}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 1;
+                          setMaterial(prev => ({
+                            ...prev,
+                            barCrafting: {
+                              ...prev.barCrafting,
+                              outputQuantity: value > 0 ? value : 1
+                            }
+                          }));
+                        }}
+                        className="bg-white text-black border-gray-300"
+                      />
+                      <div className="ml-3 text-sm text-blue-700">
+                        {material.name ? material.name : "unités"} par craft
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-600 font-medium">
+                      Définissez combien d'unités sont produites à chaque craft (ex: 2 Barres de Bronze par craft).
+                      <br/>Cette valeur impacte directement le calcul des ressources nécessaires.
                     </p>
                   </div>
                 </div>
@@ -617,7 +629,10 @@ export default function AddMaterialPage() {
               
               {/* Ressource primaire - Version améliorée */}
               <div className="space-y-3 bg-gray-50 p-4 rounded-md">
-                <h3 className="text-base font-medium text-black">Ressource Principale</h3>
+                <h3 className="text-base font-medium text-black flex items-center">
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-200 text-gray-800 text-sm mr-2">2</span>
+                  Ressource Principale
+                </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
@@ -847,7 +862,10 @@ export default function AddMaterialPage() {
               {/* Ressource secondaire - Version améliorée - conditionnellement affichée */}
               {material.barCrafting.hasSecondaryResource && (
                 <div className="space-y-3 bg-gray-50 p-4 rounded-md border-l-4 border-primary/30">
-                  <h3 className="text-base font-medium text-black">Ressource Secondaire</h3>
+                  <h3 className="text-base font-medium text-black flex items-center">
+                    <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-200 text-gray-800 text-sm mr-2">3</span>
+                    Ressource Secondaire
+                  </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
@@ -1135,9 +1153,28 @@ export default function AddMaterialPage() {
                         <Package className="h-12 w-12 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="font-bold">{material.barCrafting.outputQuantity || 1}</div>
+                    <div className="font-bold flex items-center justify-center">
+                      <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-sm">
+                        {material.barCrafting.outputQuantity || 1}×
+                      </span>
+                    </div>
                     <div className="text-xs text-black">{material.name || 'Produit'}</div>
                   </div>
+                </div>
+                
+                {/* Explication supplémentaire du ratio */}
+                <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm text-blue-800 border border-blue-100">
+                  <p className="font-medium">Ratio de production:</p>
+                  {material.barCrafting.primaryResource.name && (
+                    <p>
+                      {material.barCrafting.primaryResource.quantityPerBar || 1}× {material.barCrafting.primaryResource.name}
+                      {material.barCrafting.hasSecondaryResource && material.barCrafting.secondaryResource.name && (
+                        <> + {material.barCrafting.secondaryResource.quantityPerBar || 1}× {material.barCrafting.secondaryResource.name}</>
+                      )}
+                      {" → "}
+                      <strong>{material.barCrafting.outputQuantity || 1}× {material.name || "produit"}</strong>
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -1173,7 +1210,7 @@ export default function AddMaterialPage() {
           {text.substring(startIndex, endIndex)}
         </span>
         {endIndex < text.length ? text.substring(endIndex) : ''}
-      </>
-    );
+        </>
+    )
   }
 }
