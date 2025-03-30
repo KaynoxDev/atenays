@@ -1,13 +1,6 @@
 import { connectToDatabase } from '@/lib/mongodb';
-// Cette directive est nécessaire pour l'export statique
-export const dynamic = "force-static";
-
-// Cette fonction est nécessaire pour l'export statique des routes dynamiques
-export async function generateStaticParams() {
-  // Pour l'export statique, nous retournons un tableau vide
-  // car ces routes seront gérées par le serveur API externe
-  return [];
-}
+// Change from force-static to force-dynamic to enable PUT requests
+export const dynamic = "force-dynamic";
 
 import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
@@ -46,6 +39,35 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating order resources:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// Add GET method to ensure the endpoint responds to all expected methods
+export async function GET(request, { params }) {
+  const id = await params.id;
+  
+  try {
+    const { db } = await connectToDatabase();
+    
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID de commande invalide' }, { status: 400 });
+    }
+    
+    const order = await db.collection('orders').findOne(
+      { _id: new ObjectId(id) },
+      { projection: { checkedResources: 1 } }
+    );
+    
+    if (!order) {
+      return NextResponse.json({ error: 'Commande non trouvée' }, { status: 404 });
+    }
+    
+    return NextResponse.json({ 
+      checkedResources: order.checkedResources || {} 
+    });
+  } catch (error) {
+    console.error('Error getting order resources:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
