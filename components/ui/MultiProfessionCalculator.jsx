@@ -5,12 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, Minus, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Plus, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useGet } from '@/hooks/useApi';
 import MaterialDetails from '@/components/ui/MaterialDetails';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-export default function MultiProfessionCalculator({ onLoadingChange }) {
+export default function MultiProfessionCalculator({ onLoadingChange, initialSelectedMaterials = [] }) {
   // Charger les professions depuis l'API
   const { data: professions = [], loading: loadingProfessions } = useGet('/api/professions');
   
@@ -18,9 +18,14 @@ export default function MultiProfessionCalculator({ onLoadingChange }) {
   const safeProfessions = Array.isArray(professions) ? professions : [];
   
   // Sélection des professions
-  const [selectedProfessions, setSelectedProfessions] = useState([]);
+  const [selectedProfessions, setSelectedProfessions] = useState([
+    { profession: '', levelRange: '525' }
+  ]);
+  const [selectedMaterials, setSelectedMaterials] = useState(initialSelectedMaterials);
   const [activeTab, setActiveTab] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [totalList, setTotalList] = useState([]);
   
   // Effet pour définir l'onglet actif lors du chargement des professions
   useEffect(() => {
@@ -173,10 +178,10 @@ export default function MultiProfessionCalculator({ onLoadingChange }) {
               <div className="text-center py-8 text-muted-foreground">
                 Chargement des matériaux...
               </div>
-            ) : selectedMaterials.length > 0 ? (
+            ) : Array.isArray(selectedMaterials) && selectedMaterials.length > 0 ? (
               <div className="space-y-6">
                 {/* Liste des matériaux avec quantités mises en évidence */}
-                {Object.entries(materialsByCategory).map(([category, materials]) => (
+                {materialsByCategory && Object.entries(materialsByCategory).map(([category, materials]) => (
                   <div key={category} className="space-y-2">
                     <h3 className="font-medium text-lg">{category === 'other' ? 'Autres ressources' : category}</h3>
                     
@@ -281,17 +286,19 @@ export default function MultiProfessionCalculator({ onLoadingChange }) {
                 ))}
                 
                 {/* Liste des matériaux totaux */}
-                <div className="border-t pt-4">
-                  <h3 className="font-medium mb-2">Liste complète des matériaux</h3>
-                  <div className="space-y-1 p-2 bg-muted/20 rounded-lg">
-                    {totalList.map((item, index) => (
-                      <div key={index} className="flex justify-between">
-                        <span>{item.name}</span>
-                        <Badge variant="outline">{item.quantity}</Badge>
-                      </div>
-                    ))}
+                {Array.isArray(totalList) && totalList.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h3 className="font-medium mb-2">Liste complète des matériaux</h3>
+                    <div className="space-y-1 p-2 bg-muted/20 rounded-lg">
+                      {totalList.map((item, index) => (
+                        <div key={index} className="flex justify-between">
+                          <span>{item.name}</span>
+                          <Badge variant="outline">{item.quantity}</Badge>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
