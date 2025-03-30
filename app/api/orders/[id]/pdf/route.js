@@ -4,11 +4,10 @@ export const dynamic = "force-dynamic";
 import { renderToBuffer } from '@react-pdf/renderer';
 import { connectToDatabase } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-import React from 'react'; // Add React import
+import React from 'react';
 
 export async function GET(request, { params }) {
   try {
-    // Await params.id as required by Next.js App Router
     const id = await params.id;
     
     if (!id) {
@@ -42,12 +41,24 @@ export async function GET(request, { params }) {
     const filename = `commande_${plainOrder._id.substring(0, 8)}.pdf`;
     
     try {
-      // Import the React component for PDF rendering
-      const { OrderPDF } = await import('@/components/ui/OrderPDF');
+      // Import dynamically with a clear variable name to avoid confusion
+      const OrderPDFModule = await import('@/components/ui/OrderPDF');
+      const OrderPDFComponent = OrderPDFModule.default || OrderPDFModule.OrderPDF;
       
-      // Correctly create a React element for PDF rendering
-      // This is the key fix - use React.createElement instead of calling the component directly
-      const element = React.createElement(OrderPDF, { order: plainOrder });
+      if (!OrderPDFComponent) {
+        throw new Error('OrderPDF component not found in import');
+      }
+      
+      console.log('OrderPDF component loaded successfully');
+      
+      // Create the element with React.createElement
+      const element = React.createElement(OrderPDFComponent, { order: plainOrder });
+      
+      // Debug the element
+      console.log('React element created:', 
+        element && typeof element === 'object' ? 'Valid React element' : 'Invalid element');
+      
+      // Render to buffer
       const buffer = await renderToBuffer(element);
       
       // Retourner le PDF comme une réponse avec le bon Content-Type et Content-Disposition
@@ -60,16 +71,20 @@ export async function GET(request, { params }) {
       });
     } catch (renderError) {
       console.error('Error rendering PDF:', renderError);
+      console.error('Error details:', renderError.stack);
+      
+      // Try to provide more debugging information
       return NextResponse.json({ 
         error: `PDF rendering failed: ${renderError.message}`,
-        stack: process.env.NODE_ENV === 'development' ? renderError.stack : undefined
+        stack: renderError.stack,
+        componentType: typeof (await import('@/components/ui/OrderPDF')).default
       }, { status: 500 });
     }
   } catch (error) {
     console.error('Error generating PDF:', error);
     return NextResponse.json({ 
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: error.stack
     }, { status: 500 });
   }
 }

@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
 });
 
 // Composant principal pour le PDF de la commande
-export function OrderPDF({ order }) {
+export const OrderPDF = ({ order }) => {
   // Safe default values
   const safeOrder = order || {};
   const {
@@ -275,7 +275,7 @@ export function OrderPDF({ order }) {
       </Page>
     </Document>
   );
-}
+};
 
-// Export pour être utilisé de différentes façons
+// IMPORTANT: Export as a named export AND a default export for compatibility
 export default OrderPDF;
