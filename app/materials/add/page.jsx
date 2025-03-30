@@ -862,9 +862,10 @@ export default function AddMaterialPage() {
         </div>
       </div>
       
-      {/* Interface pour le mode multi-ajout */}
+      {/* Interface pour le mode multi-ajout - FIXED STRUCTURE */}
       {multiAddMode && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+          {/* Left sidebar for material list */}
           <Card className="md:col-span-1">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center justify-between">
@@ -945,179 +946,226 @@ export default function AddMaterialPage() {
             </CardFooter>
           </Card>
           
-          <Card className="md:col-span-4">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {currentMaterial.name 
-                  ? `Édition de ${currentMaterial.name}`
-                  : `Nouveau matériau ${selectedMaterialIndex + 1}`
-                }
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Utiliser le reste du formulaire existant ici, mais avec currentMaterial */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nom du matériau *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={currentMaterial.name}
-                      onChange={handleChange}
-                      placeholder="Ex: Minerai de cuivre"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="iconName">Nom de l'icône</Label>
-                    <Input
-                      id="iconName"
-                      name="iconName"
-                      value={currentMaterial.iconName}
-                      onChange={handleChange}
-                      placeholder="Ex: inv_ore_copper_01"
-                    />
-                    {currentMaterial.iconName && (
-                      <div className="mt-2">
-                        <img
-                          src={`https://wow.zamimg.com/images/wow/icons/medium/${currentMaterial.iconName.toLowerCase()}.jpg`}
-                          alt="Aperçu de l'icône"
-                          className="w-12 h-12 rounded"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = 'https://wow.zamimg.com/images/wow/icons/medium/inv_misc_questionmark.jpg';
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="categoryId">Catégorie</Label>
-                    <Select
-                      value={currentMaterial.categoryId}
-                      onValueChange={(value) => handleSelectChange('categoryId', value)}
-                    >
-                      <SelectTrigger id="categoryId">
-                        <SelectValue placeholder="Sélectionner une catégorie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Non catégorisé</SelectItem>
-                        {Array.isArray(categories) && categories.map((category) => (
-                          <SelectItem key={category._id} value={category._id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="profession">Profession principale</Label>
-                    <Select
-                      value={currentMaterial.profession}
-                      onValueChange={(value) => handleSelectChange('profession', value)}
-                    >
-                      <SelectTrigger id="profession">
-                        <SelectValue placeholder="Sélectionner une profession" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Aucune profession</SelectItem>
-                        {Array.isArray(professions) && professions.map((prof) => (
-                          <SelectItem key={prof._id} value={prof.name}>
-                            {prof.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="levelRange">Niveau de compétence requis</Label>
-                    <Select
-                      value={currentMaterial.levelRange}
-                      onValueChange={(value) => handleSelectChange('levelRange', value)}
-                    >
-                      <SelectTrigger id="levelRange">
-                        <SelectValue placeholder="Niveau requis" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="75">1-75 (Apprenti)</SelectItem>
-                        <SelectItem value="150">1-150 (Compagnon)</SelectItem>
-                        <SelectItem value="225">1-225 (Expert)</SelectItem>
-                        <SelectItem value="300">1-300 (Artisan)</SelectItem>
-                        <SelectItem value="375">1-375 (Maître)</SelectItem>
-                        <SelectItem value="450">1-450 (Grand maître)</SelectItem>
-                        <SelectItem value="525">1-525 (Illustre)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="isBar"
-                      checked={currentMaterial.isBar}
-                      onCheckedChange={toggleIsBar}
-                    />
-                    <Label htmlFor="isBar">
-                      Ce matériau peut être fabriqué (craftable)
-                    </Label>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Afficher la configuration de craft si nécessaire */}
-              {currentMaterial.isBar && (
-                <div className="mt-6 pt-6 border-t">
-                  <h3 className="font-medium text-lg mb-4">Configuration du craft</h3>
-                  
-                  {/* ...existing code for crafting configuration... */}
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div>
-                      <Label htmlFor="outputQuantity">Quantité produite par craft</Label>
+          {/* Right panel for editing the selected material */}
+          <div className="md:col-span-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  {currentMaterial.name 
+                    ? `Édition de ${currentMaterial.name}`
+                    : `Nouveau matériau ${selectedMaterialIndex + 1}`
+                  }
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Utiliser le reste du formulaire existant ici, mais avec currentMaterial */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nom du matériau *</Label>
                       <Input
-                        id="outputQuantity"
-                        type="number"
-                        value={currentMaterial.barCrafting.outputQuantity || 1}
-                        onChange={(e) => {
-                          if (multiAddMode) {
-                            setMaterialsList(prev => {
-                              const newList = [...prev];
-                              newList[selectedMaterialIndex] = {
-                                ...newList[selectedMaterialIndex],
-                                barCrafting: {
-                                  ...newList[selectedMaterialIndex].barCrafting,
-                                  outputQuantity: parseInt(e.target.value) || 1
-                                }
-                              };
-                              return newList;
-                            });
-                          } else {
-                            setMaterial(prev => ({
-                              ...prev,
-                              barCrafting: {
-                                ...prev.barCrafting,
-                                outputQuantity: parseInt(e.target.value) || 1
-                              }
-                            }));
-                          }
-                        }}
-                        min="1"
-                        placeholder="1"
+                        id="name"
+                        name="name"
+                        value={currentMaterial.name}
+                        onChange={handleChange}
+                        placeholder="Ex: Minerai de cuivre"
+                        required
                       />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="iconName">Nom de l'icône</Label>
+                      <Input
+                        id="iconName"
+                        name="iconName"
+                        value={currentMaterial.iconName}
+                        onChange={handleChange}
+                        placeholder="Ex: inv_ore_copper_01"
+                      />
+                      {currentMaterial.iconName && (
+                        <div className="mt-2">
+                          <img
+                            src={`https://wow.zamimg.com/images/wow/icons/medium/${currentMaterial.iconName.toLowerCase()}.jpg`}
+                            alt="Aperçu de l'icône"
+                            className="w-12 h-12 rounded"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://wow.zamimg.com/images/wow/icons/medium/inv_misc_questionmark.jpg';
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="categoryId">Catégorie</Label>
+                      <Select
+                        value={currentMaterial.categoryId}
+                        onValueChange={(value) => handleSelectChange('categoryId', value)}
+                      >
+                        <SelectTrigger id="categoryId">
+                          <SelectValue placeholder="Sélectionner une catégorie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Non catégorisé</SelectItem>
+                          {Array.isArray(categories) && categories.map((category) => (
+                            <SelectItem key={category._id} value={category._id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   
-                  {/* ...existing code for resource selection... */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="profession">Profession principale</Label>
+                      <Select
+                        value={currentMaterial.profession}
+                        onValueChange={(value) => handleSelectChange('profession', value)}
+                      >
+                        <SelectTrigger id="profession">
+                          <SelectValue placeholder="Sélectionner une profession" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Aucune profession</SelectItem>
+                          {Array.isArray(professions) && professions.map((prof) => (
+                            <SelectItem key={prof._id} value={prof.name}>
+                              {prof.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="levelRange">Niveau de compétence requis</Label>
+                      <Select
+                        value={currentMaterial.levelRange}
+                        onValueChange={(value) => handleSelectChange('levelRange', value)}
+                      >
+                        <SelectTrigger id="levelRange">
+                          <SelectValue placeholder="Niveau requis" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="75">1-75 (Apprenti)</SelectItem>
+                          <SelectItem value="150">1-150 (Compagnon)</SelectItem>
+                          <SelectItem value="225">1-225 (Expert)</SelectItem>
+                          <SelectItem value="300">1-300 (Artisan)</SelectItem>
+                          <SelectItem value="375">1-375 (Maître)</SelectItem>
+                          <SelectItem value="450">1-450 (Grand maître)</SelectItem>
+                          <SelectItem value="525">1-525 (Illustre)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="isBar"
+                        checked={currentMaterial.isBar}
+                        onCheckedChange={toggleIsBar}
+                      />
+                      <Label htmlFor="isBar">
+                        Ce matériau peut être fabriqué (craftable)
+                      </Label>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                
+                {/* Configuration de craft si le matériau est craftable */}
+                {currentMaterial.isBar && (
+                  <div className="mt-6 pt-6 border-t">
+                    <h3 className="font-medium text-lg mb-4">Configuration du craft</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                      <div>
+                        <Label htmlFor="outputQuantity">Quantité produite par craft</Label>
+                        <Input
+                          id="outputQuantity"
+                          type="number"
+                          value={currentMaterial.barCrafting?.outputQuantity || 1}
+                          onChange={(e) => {
+                            if (multiAddMode) {
+                              setMaterialsList(prev => {
+                                const newList = [...prev];
+                                newList[selectedMaterialIndex] = {
+                                  ...newList[selectedMaterialIndex],
+                                  barCrafting: {
+                                    ...newList[selectedMaterialIndex].barCrafting,
+                                    outputQuantity: parseInt(e.target.value) || 1
+                                  }
+                                };
+                                return newList;
+                              });
+                            } else {
+                              setMaterial(prev => ({
+                                ...prev,
+                                barCrafting: {
+                                  ...prev.barCrafting,
+                                  outputQuantity: parseInt(e.target.value) || 1
+                                }
+                              }));
+                            }
+                          }}
+                          min="1"
+                          placeholder="1"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Section pour les alternatives de craft */}
+                    <div className="mt-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">Alternatives de craft</h4>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addAlternativeToCurrent}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Ajouter une alternative
+                        </Button>
+                      </div>
+                      
+                      {currentMaterialAlternatives.length === 0 ? (
+                        <div className="text-sm text-muted-foreground p-4 bg-gray-50 rounded-md border">
+                          Aucune alternative configurée pour ce matériau.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {currentMaterialAlternatives.map((alt) => (
+                            <div key={alt.id} className="p-4 border rounded-lg bg-gray-50">
+                              <div className="flex justify-between items-center mb-3">
+                                <div className="flex items-center gap-3">
+                                  <Input
+                                    value={alt.name || ''}
+                                    onChange={(e) => updateCurrentAlternative(alt.id, 'name', e.target.value)}
+                                    placeholder="Nom de l'alternative"
+                                    className="w-64"
+                                  />
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeCurrentAlternative(alt.id)}
+                                  className="text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Supprimer
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
       
