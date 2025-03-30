@@ -169,7 +169,7 @@ export default function AddMaterialPage() {
     setSelectedMaterialIndex(index);
   };
   
-  // Pour les champs simples
+  // Pour les champs simples - KEEP THIS VERSION AND REMOVE THE DUPLICATE
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -203,10 +203,17 @@ export default function AddMaterialPage() {
         return newList;
       });
     } else {
-      setMaterial(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setMaterial(prev => {
+        const updated = { ...prev, [name]: value };
+        
+        // Mise à jour supplémentaire pour la profession
+        if (name === 'profession' && value) {
+          updated.professions = [...new Set([...prev.professions, value])];
+          updated.requiredBy = [...new Set([...prev.requiredBy, value])];
+        }
+        
+        return updated;
+      });
     }
   };
   
@@ -279,49 +286,6 @@ export default function AddMaterialPage() {
   // État pour le focus du champ de recherche
   const [primarySearchFocused, setPrimarySearchFocused] = useState(false);
   const [secondarySearchFocused, setSecondarySearchFocused] = useState(false);
-  
-  // Pour les champs simples
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setMaterial(prev => ({ ...prev, [name]: value }));
-  };
-  
-  const handleSelectChange = (name, value) => {
-    setMaterial(prev => {
-      const updated = { ...prev, [name]: value };
-      
-      // Mise à jour supplémentaire pour la profession
-      if (name === 'profession' && value) {
-        updated.professions = [...new Set([...prev.professions, value])];
-        updated.requiredBy = [...new Set([...prev.requiredBy, value])];
-      }
-      
-      return updated;
-    });
-  };
-  
-  // Activer/désactiver la fabrication
-  const toggleIsBar = (checked) => {
-    setMaterial(prev => ({ ...prev, isBar: checked }));
-    if (checked) setActiveSection("crafting");
-  };
-  
-  // Activer/désactiver la ressource secondaire
-  const toggleSecondaryResource = (checked) => {
-    setMaterial(prev => ({
-      ...prev,
-      barCrafting: {
-        ...prev.barCrafting,
-        hasSecondaryResource: checked,
-        secondaryResource: checked ? prev.barCrafting.secondaryResource : {
-          name: '',
-          materialId: '',
-          iconName: '',
-          quantityPerBar: 0
-        }
-      }
-    }));
-  };
   
   // Ressource primaire - recherche filtrée améliorée
   const filteredPrimaryMaterials = useMemo(() => {
