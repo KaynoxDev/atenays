@@ -10,7 +10,7 @@ import { useGet } from '@/hooks/useApi';
 import MaterialDetails from '@/components/ui/MaterialDetails';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-export default function MultiProfessionCalculator() {
+export default function MultiProfessionCalculator({ onLoadingChange }) {
   // Charger les professions depuis l'API
   const { data: professions = [], loading: loadingProfessions } = useGet('/api/professions');
   
@@ -20,6 +20,7 @@ export default function MultiProfessionCalculator() {
   // Sélection des professions
   const [selectedProfessions, setSelectedProfessions] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
+  const [loading, setLoading] = useState(false);
   
   // Effet pour définir l'onglet actif lors du chargement des professions
   useEffect(() => {
@@ -28,6 +29,13 @@ export default function MultiProfessionCalculator() {
       setActiveTab(null);
     }
   }, [safeProfessions, selectedProfessions.length]);
+  
+  // Notify parent component about loading state changes
+  useEffect(() => {
+    if (typeof onLoadingChange === 'function') {
+      onLoadingChange(loading);
+    }
+  }, [loading, onLoadingChange]);
   
   // Ajouter une profession
   const handleAddProfession = (profName, levelRange = '525') => {
@@ -102,6 +110,13 @@ export default function MultiProfessionCalculator() {
     return professions;
   }, [professions]);
   
+  // Use local loading state for all operations
+  const handleCalculate = async () => {
+    setLoading(true);
+    // ...existing code...
+    setLoading(false);
+  };
+
   // Mise à jour de l'interface utilisateur pour rendre le bouton "+" plus clair
   // et améliorer l'affichage des quantités de craft
   return (
