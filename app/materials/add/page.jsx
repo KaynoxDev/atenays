@@ -388,16 +388,48 @@ export default function AddMaterialPage() {
     });
   };
   
-  // Sélectionner une ressource pour une alternative
-  const selectAlternativeResource = (index, resourceType, resource) => {
-    updateCraftAlternative(index, `${resourceType}`, {
-      name: resource.name,
-      materialId: resource._id,
-      iconName: resource.iconName || '',
-      quantityPerBar: 1
-    });
+  // Sélectionner une ressource pour une alternative (unused function warning)
+  // You can either remove this function if not needed, or implement its usage in the UI
+  // Option 1: Remove the unused function
+  // const selectAlternativeResource = (altId, resourceType, resource) => {
+  //   updateAlternative(altId, resourceType, {
+  //     name: resource.name,
+  //     materialId: resource._id,
+  //     iconName: resource.iconName || '',
+  //     quantityPerBar: 1
+  //   });
+  // };
+  
+  // Option 2: Use the function by adding material search results functionality to alternatives
+  // Let's implement this option by adding filtering and result selection
+
+  // Filter materials for each alternative based on their search terms
+  const getFilteredAlternativeMaterials = (alternative, type) => {
+    const searchField = type === 'primaryResource' ? 'searchTerm' : 'secondarySearchTerm';
+    const searchTerm = alternative[searchField] || '';
+    
+    if (!searchTerm || searchTerm.length < 2 || !Array.isArray(allMaterials)) return [];
+    
+    return allMaterials.filter(material => 
+      material.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ).slice(0, 5); // Limit to 5 results for better performance
   };
   
+  // Add this function to handle when a material is selected from search results
+  const handleAlternativeMaterialSelect = (altId, resourceType, material) => {
+    // Use the existing selectAlternativeResource function
+    updateAlternative(altId, resourceType, {
+      name: material.name,
+      materialId: material._id,
+      iconName: material.iconName || '',
+      quantityPerBar: 1
+    });
+    
+    // Clear the search term after selection
+    const searchField = resourceType === 'primaryResource' ? 'searchTerm' : 'secondarySearchTerm';
+    updateAlternative(altId, searchField, '');
+  };
+
   // Soumettre le formulaire
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1189,7 +1221,46 @@ export default function AddMaterialPage() {
                           {/* Même structure que pour la ressource principale et secondaire, mais pour l'alternative */}
                           <div className="space-y-2">
                             <Label className="text-black">Ressource principale</Label>
-                            {/* ...champ de recherche similaire... */}
+                            <div className="space-y-2 relative">
+                              {/* Search input */}
+                              <div className="relative">
+                                <Input
+                                  placeholder="Rechercher un matériau..."
+                                  className="bg-white text-black border-gray-300 pl-10"
+                                  value={alternative.searchTerm || ''}
+                                  onChange={(e) => updateCraftAlternative(alternative.id, 'searchTerm', e.target.value)}
+                                />
+                                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                              </div>
+                              
+                              {/* Search results dropdown */}
+                              {alternative.searchTerm && alternative.searchTerm.length >= 2 && (
+                                <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
+                                  {getFilteredAlternativeMaterials(alternative, 'primaryResource').map((material) => (
+                                    <div
+                                      key={material._id}
+                                      className="p-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                                      onClick={() => handleAlternativeMaterialSelect(alternative.id, 'primaryResource', material)}
+                                    >
+                                      {material.iconName && (
+                                        <img
+                                          src={`https://wow.zamimg.com/images/wow/icons/small/${material.iconName.toLowerCase()}.jpg`}
+                                          alt={material.name}
+                                          className="w-6 h-6 mr-2 rounded"
+                                          onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                                          }}
+                                        />
+                                      )}
+                                      <span>{material.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* ...existing selected resource display... */}
+                            </div>
                           </div>
                           
                           <div className="space-y-2">
@@ -1226,7 +1297,71 @@ export default function AddMaterialPage() {
                         
                         {alternative.hasSecondaryResource && (
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-3 rounded-md border border-gray-200">
-                            {/* ...champs pour la ressource secondaire alternative... */}
+                            <div className="space-y-2">
+                              <Label className="text-black">Ressource secondaire</Label>
+                              <div className="space-y-2 relative">
+                                {/* Search input */}
+                                <div className="relative">
+                                  <Input
+                                    placeholder="Rechercher un matériau..."
+                                    className="bg-white text-black border-gray-300 pl-10"
+                                    value={alternative.secondarySearchTerm || ''}
+                                    onChange={(e) => updateCraftAlternative(alternative.id, 'secondarySearchTerm', e.target.value)}
+                                  />
+                                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                </div>
+                                
+                                {/* Search results dropdown */}
+                                {alternative.secondarySearchTerm && alternative.secondarySearchTerm.length >= 2 && (
+                                  <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
+                                    {getFilteredAlternativeMaterials(alternative, 'secondaryResource').map((material) => (
+                                      <div
+                                        key={material._id}
+                                        className="p-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                                        onClick={() => handleAlternativeMaterialSelect(alternative.id, 'secondaryResource', material)}
+                                      >
+                                        {material.iconName && (
+                                          <img
+                                            src={`https://wow.zamimg.com/images/wow/icons/small/${material.iconName.toLowerCase()}.jpg`}
+                                            alt={material.name}
+                                            className="w-6 h-6 mr-2 rounded"
+                                            onError={(e) => {
+                                              e.target.onerror = null;
+                                              e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                                            }}
+                                          />
+                                        )}
+                                        <span>{material.name}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {/* ...existing selected resource display... */}
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor={`altSecondaryIcon-${index}`} className="text-black">Icône</Label>
+                              <Input 
+                                id={`altSecondaryIcon-${index}`}
+                                value={alternative.secondaryResource.iconName}
+                                onChange={(e) => updateCraftAlternative(index, 'secondaryResource.iconName', e.target.value)}
+                                placeholder="inv_ore_tin_01"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor={`altSecondaryQty-${index}`} className="text-black">Quantité</Label>
+                              <Input 
+                                id={`altSecondaryQty-${index}`}
+                                type="number"
+                                min="1"
+                                value={alternative.secondaryResource.quantityPerBar}
+                                onChange={(e) => updateCraftAlternative(index, 'secondaryResource.quantityPerBar', parseInt(e.target.value) || 1)}
+                                placeholder="1"
+                              />
+                            </div>
                           </div>
                         )}
                         
