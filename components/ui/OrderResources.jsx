@@ -113,13 +113,18 @@ export default function OrderResources({ order, professions, checkedResources = 
             // Récupérer la quantité produite par craft (par défaut: 1)
             const outputQuantity = craftable.barCrafting.outputQuantity || 1;
             
+            // Calculer le nombre de crafts nécessaires globalement avant d'ajouter les composants
+            const craftsNeeded = Math.ceil(craftable.quantity / outputQuantity);
+            
+            // Ajouter cette information directement au craftable pour référence ultérieure
+            craftable.craftsNeeded = craftsNeeded;
+            
             // Traiter la ressource primaire
             if (craftable.barCrafting.primaryResource && craftable.barCrafting.primaryResource.name) {
               const primary = craftable.barCrafting.primaryResource;
               const primaryName = primary.name;
               
               // Calculer le nombre de crafts nécessaires en tenant compte de outputQuantity
-              const craftsNeeded = Math.ceil(craftable.quantity / outputQuantity);
               const totalQuantityNeeded = craftsNeeded * (primary.quantityPerBar || 1);
               
               // Ajouter ce composant au craftable
@@ -171,7 +176,6 @@ export default function OrderResources({ order, professions, checkedResources = 
               const secondaryName = secondary.name;
               
               // Utiliser le même nombre de crafts que pour la ressource primaire
-              const craftsNeeded = Math.ceil(craftable.quantity / outputQuantity);
               const totalQuantityNeeded = craftsNeeded * (secondary.quantityPerBar || 1);
               
               // Ajouter ce composant au craftable
@@ -216,27 +220,25 @@ export default function OrderResources({ order, professions, checkedResources = 
             }
             
             // Calculer et stocker les informations de ratio dans le craftable
-            if (craftable.barCrafting.primaryResource && 
-                craftable.barCrafting.hasSecondaryResource && 
-                craftable.barCrafting.secondaryResource) {
-              
+            if (craftable.barCrafting.primaryResource) {
               const primaryResource = craftable.barCrafting.primaryResource;
-              const secondaryResource = craftable.barCrafting.secondaryResource;
+              const secondaryResource = craftable.barCrafting.hasSecondaryResource ? 
+                craftable.barCrafting.secondaryResource : null;
               
               // Calculer le ratio de craft
               const primaryPerBar = primaryResource.quantityPerBar || 1;
-              const secondaryPerBar = secondaryResource.quantityPerBar || 1;
+              const secondaryPerBar = secondaryResource?.quantityPerBar || 0;
               const outputQty = craftable.barCrafting.outputQuantity || 1;
               
               // Ajouter cette information au craftable
               craftable.craftRatio = {
                 primaryName: primaryResource.name,
-                secondaryName: secondaryResource.name,
+                secondaryName: secondaryResource?.name || '',
                 primaryPerBar,
                 secondaryPerBar,
                 outputQuantity: outputQty,
-                craftsNeeded: Math.ceil(craftable.quantity / outputQty),
-                ratio: secondaryPerBar / primaryPerBar
+                craftsNeeded: craftsNeeded,
+                ratio: secondaryResource ? (secondaryPerBar / primaryPerBar) : 0
               };
             }
           }
@@ -412,8 +414,8 @@ export default function OrderResources({ order, professions, checkedResources = 
                                       {index > 0 && <span>+</span>}
                                       <div className="flex items-center">
                                         <span>
-                                          {/* Calculer la quantité par unité de produit */}
-                                          {component.quantity / resource.craftRatio.craftsNeeded}x {component.name}
+                                          {/* Calculer la quantité par unité de produit en toute sécurité */}
+                                          {component.quantity / (resource.craftsNeeded || resource.craftRatio?.craftsNeeded || 1)}x {component.name}
                                         </span>
                                       </div>
                                     </React.Fragment>
@@ -432,7 +434,7 @@ export default function OrderResources({ order, professions, checkedResources = 
                                   <div className="font-medium">
                                     Pour {resource.quantity} {resource.name} 
                                     {resource.craftRatio?.outputQuantity > 1 ? 
-                                      ` (${resource.craftRatio.craftsNeeded} crafts)` : ''}:
+                                      ` (${resource.craftsNeeded || resource.craftRatio?.craftsNeeded || Math.ceil(resource.quantity / (resource.craftRatio?.outputQuantity || 1))} crafts)` : ''}:
                                   </div>
                                   {resource.craftComponents.map((component, index) => (
                                     <div key={index}>
@@ -449,10 +451,13 @@ export default function OrderResources({ order, professions, checkedResources = 
                                     Proportions des composants:
                                   </div>
                                   <div>
-                                    {resource.craftRatio.primaryPerBar}x {resource.craftRatio.primaryName} + 
-                                    {resource.craftRatio.secondaryPerBar}x {resource.craftRatio.secondaryName} = 
+                                    {resource.craftRatio.primaryPerBar}x {resource.craftRatio.primaryName}
+                                    {resource.craftRatio.secondaryName && (
+                                      <> + {resource.craftRatio.secondaryPerBar}x {resource.craftRatio.secondaryName}</>
+                                    )}
+                                    {" = "}
                                     {resource.craftRatio.outputQuantity > 1 ? 
-                                      <strong> {resource.craftRatio.outputQuantity}x </strong> : " "}
+                                      <strong>{resource.craftRatio.outputQuantity}x </strong> : ""}
                                     {resource.name}
                                   </div>
                                 </div>
