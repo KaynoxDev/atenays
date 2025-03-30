@@ -12,9 +12,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Check, Info, Plus, RefreshCw, Save, Search, Trash2, X, Copy, CopyPlus } from 'lucide-react';
+import { ArrowLeft, Check, Info, Plus, RefreshCw, Save, Search, Trash2, X, Copy, CopyPlus, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+// Fonction pour forcer un thème spécifique
+const forceTheme = (theme) => {
+  const root = document.documentElement;
+  if (theme === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+  localStorage.setItem('theme', theme);
+};
 
 export default function AddMaterialPage() {
   const router = useRouter();
@@ -862,15 +873,20 @@ export default function AddMaterialPage() {
         </div>
       </div>
       
-      {/* Interface pour le mode multi-ajout - FIXED STRUCTURE */}
+      {/* Interface pour le mode multi-ajout - Structure corrigée et complète */}
       {multiAddMode && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
-          {/* Left sidebar for material list */}
+          {/* Sidebar pour la liste des matériaux */}
           <Card className="md:col-span-1">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center justify-between">
                 <span>Liste des matériaux</span>
-                <Button variant="ghost" size="sm" onClick={addNewMaterial} title="Ajouter un nouveau matériau">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={addNewMaterial}
+                  title="Ajouter un nouveau matériau"
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </CardTitle>
@@ -938,7 +954,7 @@ export default function AddMaterialPage() {
                 </div>
               </ScrollArea>
             </CardContent>
-            <CardFooter className="flex justify-center p-3">
+            <CardFooter className="flex justify-center p-3 border-t">
               <Button variant="outline" onClick={addNewMaterial} className="w-full">
                 <Plus className="h-4 w-4 mr-2" />
                 Ajouter un matériau
@@ -946,19 +962,19 @@ export default function AddMaterialPage() {
             </CardFooter>
           </Card>
           
-          {/* Right panel for editing the selected material */}
+          {/* Formulaire d'édition du matériau sélectionné */}
           <div className="md:col-span-4">
-            <Card>
+            <Card className="h-full">
               <CardHeader>
                 <CardTitle className="text-lg">
-                  {currentMaterial.name 
+                  {currentMaterial?.name 
                     ? `Édition de ${currentMaterial.name}`
                     : `Nouveau matériau ${selectedMaterialIndex + 1}`
                   }
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Utiliser le reste du formulaire existant ici, mais avec currentMaterial */}
+                {/* Champs pour le matériau courant */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -966,7 +982,7 @@ export default function AddMaterialPage() {
                       <Input
                         id="name"
                         name="name"
-                        value={currentMaterial.name}
+                        value={currentMaterial?.name || ''}
                         onChange={handleChange}
                         placeholder="Ex: Minerai de cuivre"
                         required
@@ -978,11 +994,11 @@ export default function AddMaterialPage() {
                       <Input
                         id="iconName"
                         name="iconName"
-                        value={currentMaterial.iconName}
+                        value={currentMaterial?.iconName || ''}
                         onChange={handleChange}
                         placeholder="Ex: inv_ore_copper_01"
                       />
-                      {currentMaterial.iconName && (
+                      {currentMaterial?.iconName && (
                         <div className="mt-2">
                           <img
                             src={`https://wow.zamimg.com/images/wow/icons/medium/${currentMaterial.iconName.toLowerCase()}.jpg`}
@@ -1000,8 +1016,8 @@ export default function AddMaterialPage() {
                     <div className="space-y-2">
                       <Label htmlFor="categoryId">Catégorie</Label>
                       <Select
-                        value={currentMaterial.categoryId}
-                        onValueChange={(value) => handleSelectChange('categoryId', value)}
+                        value={currentMaterial?.categoryId || "none"}
+                        onValueChange={(value) => handleSelectChange('categoryId', value === "none" ? "" : value)}
                       >
                         <SelectTrigger id="categoryId">
                           <SelectValue placeholder="Sélectionner une catégorie" />
@@ -1022,8 +1038,8 @@ export default function AddMaterialPage() {
                     <div className="space-y-2">
                       <Label htmlFor="profession">Profession principale</Label>
                       <Select
-                        value={currentMaterial.profession}
-                        onValueChange={(value) => handleSelectChange('profession', value)}
+                        value={currentMaterial?.profession || "none"}
+                        onValueChange={(value) => handleSelectChange('profession', value === "none" ? "" : value)}
                       >
                         <SelectTrigger id="profession">
                           <SelectValue placeholder="Sélectionner une profession" />
@@ -1042,7 +1058,7 @@ export default function AddMaterialPage() {
                     <div className="space-y-2">
                       <Label htmlFor="levelRange">Niveau de compétence requis</Label>
                       <Select
-                        value={currentMaterial.levelRange}
+                        value={currentMaterial?.levelRange || "525"}
                         onValueChange={(value) => handleSelectChange('levelRange', value)}
                       >
                         <SelectTrigger id="levelRange">
@@ -1063,7 +1079,7 @@ export default function AddMaterialPage() {
                     <div className="flex items-center space-x-2">
                       <Switch
                         id="isBar"
-                        checked={currentMaterial.isBar}
+                        checked={currentMaterial?.isBar || false}
                         onCheckedChange={toggleIsBar}
                       />
                       <Label htmlFor="isBar">
@@ -1074,7 +1090,7 @@ export default function AddMaterialPage() {
                 </div>
                 
                 {/* Configuration de craft si le matériau est craftable */}
-                {currentMaterial.isBar && (
+                {currentMaterial?.isBar && (
                   <div className="mt-6 pt-6 border-t">
                     <h3 className="font-medium text-lg mb-4">Configuration du craft</h3>
                     
@@ -1084,17 +1100,17 @@ export default function AddMaterialPage() {
                         <Input
                           id="outputQuantity"
                           type="number"
-                          value={currentMaterial.barCrafting?.outputQuantity || 1}
+                          value={currentMaterial?.barCrafting?.outputQuantity || 1}
                           onChange={(e) => {
                             if (multiAddMode) {
                               setMaterialsList(prev => {
                                 const newList = [...prev];
-                                newList[selectedMaterialIndex] = {
-                                  ...newList[selectedMaterialIndex],
-                                  barCrafting: {
-                                    ...newList[selectedMaterialIndex].barCrafting,
-                                    outputQuantity: parseInt(e.target.value) || 1
-                                  }
+                                if (!newList[selectedMaterialIndex].barCrafting) {
+                                  newList[selectedMaterialIndex].barCrafting = {};
+                                }
+                                newList[selectedMaterialIndex].barCrafting = {
+                                  ...newList[selectedMaterialIndex].barCrafting,
+                                  outputQuantity: parseInt(e.target.value) || 1
                                 };
                                 return newList;
                               });
@@ -1114,7 +1130,7 @@ export default function AddMaterialPage() {
                       </div>
                     </div>
                     
-                    {/* Section pour les alternatives de craft */}
+                    {/* Section alternatives de craft */}
                     <div className="mt-6 space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium">Alternatives de craft</h4>
@@ -1169,7 +1185,7 @@ export default function AddMaterialPage() {
         </div>
       )}
       
-      {/* Formulaire standard pour l'ajout d'un seul matériau */}
+      {/* Mode normal (non multi-ajout) */}
       {!multiAddMode && (
         <Card>
           <form onSubmit={handleSubmit}>
