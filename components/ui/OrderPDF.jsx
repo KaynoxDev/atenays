@@ -115,7 +115,15 @@ const styles = StyleSheet.create({
   },
 });
 
-// Validation helper function
+// Safe string converter (important!)
+const toString = (value) => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return value.toString();
+  return String(value);
+};
+
+// This function completely sanitizes objects for React PDF
 const sanitizeData = (order) => {
   if (!order) {
     return {
@@ -133,20 +141,24 @@ const sanitizeData = (order) => {
   }
 
   return {
-    _id: order._id || 'unknown',
-    clientName: order.clientName || 'Client non spécifié',
-    clientRealm: order.clientRealm || '',
-    character: order.character || '',
+    _id: toString(order._id || 'unknown'),
+    clientName: toString(order.clientName || 'Client non spécifié'),
+    clientRealm: toString(order.clientRealm || ''),
+    character: toString(order.character || ''),
     createdAt: order.createdAt || new Date().toISOString(),
-    status: order.status || 'pending',
-    notes: order.notes || '',
-    price: Number(order.price) || 0,
-    initialPayment: Number(order.initialPayment) || 0,
-    professions: Array.isArray(order.professions) ? order.professions : []
+    status: toString(order.status || 'pending'),
+    notes: toString(order.notes || ''),
+    price: Number(order.price || 0),
+    initialPayment: Number(order.initialPayment || 0),
+    professions: Array.isArray(order.professions) ? 
+      order.professions.map(prof => ({
+        name: toString(prof.name || 'N/A'),
+        levelRange: toString(prof.levelRange || '525'),
+        price: Number(prof.price || 0)
+      })) : []
   };
 };
 
-// This must be exactly as shown in the React-PDF documentation
 const OrderPDF = ({ order }) => {
   // Use safe defaults with enhanced validation
   const safeOrder = sanitizeData(order);
@@ -164,15 +176,16 @@ const OrderPDF = ({ order }) => {
     initialPayment,
     professions
   } = safeOrder;
-
-  // This was missing - get professions array safely
+  
+  // Ensure professions is an array
   const safeProfessions = Array.isArray(professions) ? professions : [];
   
-  // Helper functions for formatting
+  // Format date safely
   const formatDate = (dateString) => {
     try {
       if (!dateString) return 'N/A';
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Date invalide';
       return date.toLocaleDateString('fr-FR');
     } catch(e) {
       return 'Date invalide';
@@ -191,22 +204,25 @@ const OrderPDF = ({ order }) => {
   
   // Status translation
   const statusNames = {
-    pending: 'En attente',
+    'pending': 'En attente',
     'in-progress': 'En cours',
-    completed: 'Terminée',
-    cancelled: 'Annulée'
+    'completed': 'Terminée',
+    'cancelled': 'Annulée'
   };
   const statusName = statusNames[status] || 'Statut inconnu';
 
+  // Calculate totals
+  const remainingAmount = price - initialPayment;
+  
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Aténays - Détails de commande</Text>
-          <Text style={styles.orderNumber}>Commande #{_id ? _id.substring(0, 8) : 'N/A'}</Text>
+          <Text style={styles.orderNumber}>Commande #{toString(_id).substring(0, 8)}</Text>
           <View style={[styles.statusBadge, statusStyle]}>
-            <Text>{statusName}</Text>
+            <Text>{toString(statusName)}</Text>
           </View>
         </View>
         
@@ -215,15 +231,15 @@ const OrderPDF = ({ order }) => {
           <Text style={styles.sectionTitle}>Informations client</Text>
           <View style={styles.row}>
             <Text style={styles.labelColumn}>Client:</Text>
-            <Text style={styles.valueColumn}>{clientName}</Text>
+            <Text style={styles.valueColumn}>{toString(clientName)}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.labelColumn}>Royaume:</Text>
-            <Text style={styles.valueColumn}>{clientRealm || 'Non spécifié'}</Text>
+            <Text style={styles.valueColumn}>{toString(clientRealm || 'Non spécifié')}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.labelColumn}>Personnage:</Text>
-            <Text style={styles.valueColumn}>{character || 'Non spécifié'}</Text>
+            <Text style={styles.valueColumn}>{toString(character || 'Non spécifié')}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.labelColumn}>Date de commande:</Text>
@@ -241,17 +257,17 @@ const OrderPDF = ({ order }) => {
           </View>
           
           {safeProfessions.map((prof, idx) => (
-            <View key={idx} style={styles.tableRow}>
-              <Text style={[styles.tableCell, styles.col1]}>{prof.name || 'N/A'}</Text>
-              <Text style={[styles.tableCell, styles.col2]}>1-{prof.levelRange || '525'}</Text>
-              <Text style={[styles.tableCell, styles.col3]}>{prof.price || 0} or</Text>
+            <View key={toString(idx)} style={styles.tableRow}>
+              <Text style={[styles.tableCell, styles.col1]}>{toString(prof.name)}</Text>
+              <Text style={[styles.tableCell, styles.col2]}>1-{toString(prof.levelRange)}</Text>
+              <Text style={[styles.tableCell, styles.col3]}>{toString(prof.price)} or</Text>
             </View>
           ))}
           
           <View style={styles.totalRow}>
             <Text style={[styles.tableCell, styles.col1]}></Text>
             <Text style={[styles.tableCell, styles.col2]}>Total:</Text>
-            <Text style={[styles.tableCell, styles.col3]}>{price} or</Text>
+            <Text style={[styles.tableCell, styles.col3]}>{toString(price)} or</Text>
           </View>
         </View>
         
@@ -260,15 +276,15 @@ const OrderPDF = ({ order }) => {
           <Text style={styles.sectionTitle}>Informations de paiement</Text>
           <View style={styles.row}>
             <Text style={styles.labelColumn}>Prix total:</Text>
-            <Text style={styles.valueColumn}>{price} or</Text>
+            <Text style={styles.valueColumn}>{toString(price)} or</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.labelColumn}>Acompte versé:</Text>
-            <Text style={styles.valueColumn}>{initialPayment || 0} or</Text>
+            <Text style={styles.valueColumn}>{toString(initialPayment)} or</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.labelColumn}>Reste à payer:</Text>
-            <Text style={styles.valueColumn}>{price - (initialPayment || 0)} or</Text>
+            <Text style={styles.valueColumn}>{toString(remainingAmount)} or</Text>
           </View>
         </View>
         
@@ -277,14 +293,14 @@ const OrderPDF = ({ order }) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notes</Text>
             <View style={styles.notes}>
-              <Text>{notes}</Text>
+              <Text>{toString(notes)}</Text>
             </View>
           </View>
         )}
         
         {/* Footer */}
         <Text style={styles.footer}>
-          Document généré le {new Date().toLocaleDateString('fr-FR')} par Aténays • Ce document fait office de reçu pour la commande
+          Document généré le {formatDate(new Date())} par Aténays • Ce document fait office de reçu pour la commande
         </Text>
       </Page>
     </Document>
