@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { renderToBuffer } from '@react-pdf/renderer';
 import { connectToDatabase } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-import { OrderPDF } from '@/components/ui/OrderPDF';
+import React from 'react'; // Add React import
 
 export async function GET(request, { params }) {
   try {
@@ -45,8 +45,10 @@ export async function GET(request, { params }) {
       // Import the React component for PDF rendering
       const { OrderPDF } = await import('@/components/ui/OrderPDF');
       
-      // Create the PDF using the component with proper props
-      const buffer = await renderToBuffer(OrderPDF({ order: plainOrder }));
+      // Correctly create a React element for PDF rendering
+      // This is the key fix - use React.createElement instead of calling the component directly
+      const element = React.createElement(OrderPDF, { order: plainOrder });
+      const buffer = await renderToBuffer(element);
       
       // Retourner le PDF comme une réponse avec le bon Content-Type et Content-Disposition
       return new NextResponse(buffer, {
