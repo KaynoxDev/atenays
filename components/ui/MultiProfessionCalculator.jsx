@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label'; // Add missing Label import
 import { Trash2, Plus, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useGet } from '@/hooks/useApi';
 import MaterialDetails from '@/components/ui/MaterialDetails';
@@ -155,13 +156,47 @@ export default function MultiProfessionCalculator({ onLoadingChange, initialSele
                 {/* Profession select */}
                 <div className="space-y-2 flex-1">
                   <Label>Profession {index + 1}</Label>
-                  {/* ...profession selector... */}
+                  <Select 
+                    value={prof.profession} 
+                    onValueChange={(value) => updateProfession(index, 'profession', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner une profession" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Alchimie">Alchimie</SelectItem>
+                      <SelectItem value="Forge">Forge</SelectItem>
+                      <SelectItem value="Couture">Couture</SelectItem>
+                      <SelectItem value="Enchantement">Enchantement</SelectItem>
+                      <SelectItem value="Ingénierie">Ingénierie</SelectItem>
+                      <SelectItem value="Joaillerie">Joaillerie</SelectItem>
+                      <SelectItem value="Travail du cuir">Travail du cuir</SelectItem>
+                      <SelectItem value="Calligraphie">Calligraphie</SelectItem>
+                      <SelectItem value="Minage">Minage</SelectItem>
+                      <SelectItem value="Herboristerie">Herboristerie</SelectItem>
+                      <SelectItem value="Dépeçage">Dépeçage</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 {/* Level range select */}
                 <div className="space-y-2 w-[180px]">
                   <Label>Niveau</Label>
-                  {/* ...level range selector... */}
+                  <Select 
+                    value={prof.levelRange} 
+                    onValueChange={(value) => updateProfession(index, 'levelRange', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Niveau" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="225">1-225 (Classic)</SelectItem>
+                      <SelectItem value="300">1-300 (Vanilla)</SelectItem>
+                      <SelectItem value="375">1-375 (TBC)</SelectItem>
+                      <SelectItem value="450">1-450 (WotLK)</SelectItem>
+                      <SelectItem value="525">1-525 (Cataclysm)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 {/* Remove button */}
