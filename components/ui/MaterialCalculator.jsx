@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowRight, Package, RefreshCw, Filter, Search } from 'lucide-react';
+import { ArrowRight, Package, RefreshCw, Filter, Search, Plus } from 'lucide-react';
 
 export default function MaterialCalculator({ profession, levelRange = '525' }) {
   const [levelFilter, setLevelFilter] = useState(levelRange);
@@ -23,9 +23,26 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
   const safeProfession = typeof profession === 'string' ? profession : '';
   const safeLevelRange = typeof levelRange === 'string' ? levelRange : '525';
   
-  // Chargement des matériaux depuis l'API avec vérification améliorée de la profession
+  // Chargement des matériaux depuis l'API
   const { data: materials = [], loading: loadingMaterials, error, refetch } = 
-    useGet(`/api/materials?profession=${encodeURIComponent(safeProfession || '')}&levelRange=${safeLevelRange}`);
+    useGet(safeProfession ? `/api/materials?profession=${encodeURIComponent(safeProfession)}&levelRange=${safeLevelRange}` : null);
+  
+  // Charger les données initiales automatiquement quand le métier change
+  useEffect(() => {
+    if (safeProfession && Array.isArray(materials) && materials.length > 0) {
+      // Ajouter automatiquement tous les matériaux du métier avec leur quantité par défaut
+      const materialsToAdd = materials.map(material => ({
+        id: material._id,
+        name: material.name || 'Matériau sans nom',
+        iconName: material.iconName || '',
+        quantity: material.quantity || 1,
+        isBar: !!material.isBar,
+        barCrafting: material.barCrafting || null
+      }));
+      
+      setSelectedMaterials(materialsToAdd);
+    }
+  }, [safeProfession, materials]);
   
   // Assurer que materials est toujours un tableau
   const safeMaterials = Array.isArray(materials) ? materials : [];
@@ -37,17 +54,10 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
     }
   }, [safeProfession, refetch]);
   
-  // Filtrer les matériaux avec vérification supplémentaire de la profession
+  // Filtrer les matériaux avec sécurité améliorée
   const filteredMaterials = safeMaterials.filter(material => {
     // Protection supplémentaire contre les objets malformés
     if (!material || typeof material !== 'object') return false;
-    
-    // Vérification de l'association au métier
-    const belongsToProfession = 
-      material.profession === safeProfession || 
-      (Array.isArray(material.professions) && material.professions.includes(safeProfession));
-      
-    if (!belongsToProfession) return false;
     
     // Filtre de recherche avec vérification du type de données
     if (searchTerm && typeof material.name === 'string') {
@@ -88,7 +98,7 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
           id: material._id || `material-${Date.now()}`,
           name: material.name || 'Matériau sans nom',
           iconName: material.iconName || '',
-          quantity: quantity || 1,
+          quantity: quantity || material.quantity || 1,  // Utiliser la quantité par défaut du matériau si disponible
           isBar: !!material.isBar,
           barCrafting: material.barCrafting || null
         }];
@@ -130,16 +140,31 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
         
         // Si c'est un matériau craftable et qu'il a des composants
         if (material.isBar && material.barCrafting) {
-          const { primaryResource, secondaryResource, hasSecondaryResource } = material.barCrafting;
+          const { primaryResource, secondaryResource, hasSecondaryResource, outputQuantity = 1 } = material.barCrafting;
+          
+          // Calculer le nombre de crafts nécessaires (en tenant compte du nombre produit par craft)
+          const outputQty = Math.max(1, outputQuantity || 1); // Éviter division par zéro
+          // Arrondir à l'entier supérieur pour avoir assez de matériaux
+          const numberOfCraftsNeeded = Math.ceil(materialQty / outputQty);
           
           // Vérifications pour ressource primaire
           if (primaryResource && primaryResource.name) {
-            const primaryQuantity = materialQty * (Number(primaryResource.quantityPerBar) || 1);
+            // Calculer la quantité en tenant compte du nombre de crafts nécessaires
+            const primaryQuantity = numberOfCraftsNeeded * (Number(primaryResource.quantityPerBar) || 1);
             const primaryKey = primaryResource.name;
             
             if (result.has(primaryKey)) {
               const existingResource = result.get(primaryKey);
               existingResource.quantity = (existingResource.quantity || 0) + primaryQuantity;
+              
+              // Ajouter l'info d'utilisation si elle n'existe pas
+              if (!existingResource.usedIn.some(u => u.name === material.name)) {
+                existingResource.usedIn.push({
+                  name: material.name,
+                  quantity: primaryQuantity,
+                  iconName: material.iconName
+                });
+              }
             } else {
               result.set(primaryKey, {
                 id: primaryResource.materialId || primaryKey,
@@ -158,7 +183,8 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
           
           // Vérifications pour ressource secondaire
           if (hasSecondaryResource && secondaryResource && secondaryResource.name) {
-            const secondaryQuantity = materialQty * (Number(secondaryResource.quantityPerBar) || 1);
+            // Calculer la quantité en tenant compte du nombre de crafts nécessaires
+            const secondaryQuantity = numberOfCraftsNeeded * (Number(secondaryResource.quantityPerBar) || 1);
             const secondaryKey = secondaryResource.name;
             
             if (result.has(secondaryKey)) {
@@ -209,7 +235,8 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
               name: material.name,
               iconName: material.iconName || '',
               quantity: materialQty,
-              isRaw: !material.isBar
+              isRaw: !material.isBar,
+              usedIn: []
             });
           }
         }
@@ -340,13 +367,13 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
                       type="number" 
                       className="w-16 h-8" 
                       min="1" 
-                      defaultValue="1" 
+                      defaultValue={material.quantity || "1"}
                       onChange={(e) => e.target.value = Math.max(1, e.target.value)} 
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           const qty = parseInt(e.target.value, 10);
                           if (qty > 0) handleAddMaterial(material, qty);
-                          e.target.value = "1";
+                          e.target.value = material.quantity || "1";
                         }
                       }}
                     />
@@ -355,9 +382,9 @@ export default function MaterialCalculator({ profession, levelRange = '525' }) {
                       size="sm"
                       onClick={(e) => {
                         const input = e.currentTarget.previousElementSibling;
-                        const qty = parseInt(input.value, 10) || 1;
+                        const qty = parseInt(input.value, 10) || material.quantity || 1;
                         handleAddMaterial(material, qty);
-                        input.value = "1";
+                        input.value = material.quantity || "1";
                       }}
                     >
                       +

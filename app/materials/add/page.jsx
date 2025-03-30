@@ -50,6 +50,7 @@ export default function AddMaterialPage() {
     requiredBy: [],
     isBar: false,
     barCrafting: {
+      outputQuantity: 1, // Nouvel attribut: nombre d'objets produits par craft
       primaryResource: {
         name: '',
         materialId: '',
@@ -583,6 +584,37 @@ export default function AddMaterialPage() {
           
           {material.isBar && activeSection === "crafting" && (
             <CardContent className="pt-6 space-y-6 bg-white text-black">
+              {/* Configuration générale de craft */}
+              <div className="space-y-3 bg-gray-50 p-4 rounded-md">
+                <h3 className="text-base font-medium text-black">Configuration générale</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="outputQuantity" className="text-black">Quantité produite par craft</Label>
+                    <Input
+                      id="outputQuantity"
+                      type="number"
+                      min="1"
+                      value={material.barCrafting.outputQuantity || 1}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1;
+                        setMaterial(prev => ({
+                          ...prev,
+                          barCrafting: {
+                            ...prev.barCrafting,
+                            outputQuantity: value > 0 ? value : 1
+                          }
+                        }));
+                      }}
+                      className="bg-white text-black border-gray-300"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Le nombre d'objets produits à chaque craft (par défaut: 1)
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
               {/* Ressource primaire - Version améliorée */}
               <div className="space-y-3 bg-gray-50 p-4 rounded-md">
                 <h3 className="text-base font-medium text-black">Ressource Principale</h3>
@@ -1103,7 +1135,7 @@ export default function AddMaterialPage() {
                         <Package className="h-12 w-12 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="font-bold">1</div>
+                    <div className="font-bold">{material.barCrafting.outputQuantity || 1}</div>
                     <div className="text-xs text-black">{material.name || 'Produit'}</div>
                   </div>
                 </div>
