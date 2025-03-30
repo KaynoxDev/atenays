@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 
 /* Professional Accounting Color Palette */
@@ -303,4 +301,48 @@ body {
 /* S'assurer que le mode sombre est correctement appliqué */
 html.dark body {
   color-scheme: dark;
+}
+
+/* Print styles */
+@media print {
+  /* Hide navigation, sidebar and other UI elements */
+  header, nav, aside, footer, .print:hidden {
+    display: none !important;
+  }
+  
+  /* Set background and text color for printing */
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  /* Make sure content spans full page width */
+  .container, main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Ensure text is readable when printed */
+  p, h1, h2, h3, h4, h5, h6, span, div {
+    color: black !important;
+  }
+  
+  /* Ensure tables print properly */
+  table {
+    page-break-inside: auto;
+  }
+  
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  
+  thead {
+    display: table-header-group;
+  }
+  
+  tfoot {
+    display: table-footer-group;
+  }
 }

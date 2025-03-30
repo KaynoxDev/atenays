@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGet, apiPut } from '@/hooks/useApi';
 import OrderDetails from '@/components/ui/OrderDetails';
 import OrderResources from '@/components/ui/OrderResources'; // Nouveau composant
-import { ArrowLeft, Calculator } from 'lucide-react';
+import { ArrowLeft, Calculator, Printer } from 'lucide-react'; // Add Printer import
 import Link from 'next/link';
 import MultiProfessionCalculator from '@/components/ui/MultiProfessionCalculator';
 
@@ -126,13 +126,22 @@ export default function OrderDetailPage() {
           <h1 className="text-3xl font-bold text-primary">Commande #{params.id.substring(0, 7)}</h1>
         </div>
         
-        <Button 
-          variant="outline"
-          onClick={() => setShowCalculator(!showCalculator)}
-        >
-          <Calculator className="h-4 w-4 mr-2" />
-          {showCalculator ? 'Masquer le calculateur' : 'Calculateur de matériaux'}
-        </Button>
+        <div className="flex gap-2">
+          {/* Add print button */}
+          <Link href={`/orders/${params.id}/print`} target="_blank">
+            <Button variant="outline">
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimer
+            </Button>
+          </Link>
+          <Button 
+            variant="outline"
+            onClick={() => setShowCalculator(!showCalculator)}
+          >
+            <Calculator className="h-4 w-4 mr-2" />
+            {showCalculator ? 'Masquer le calculateur' : 'Calculateur de matériaux'}
+          </Button>
+        </div>
       </div>
       
       {showCalculator && (
