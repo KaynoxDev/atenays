@@ -10,11 +10,12 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useGet, apiPost } from '@/hooks/useApi';
-import { ArrowLeft, Save, X, Package, ArrowRight, Plus, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Save, X, Package, ArrowRight, Plus, Search, Filter, Trash } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { forceTheme } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AddMaterialPage() {
   const router = useRouter();
@@ -467,6 +468,9 @@ export default function AddMaterialPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Tabs for crafting configuration
+  const [craftingTab, setCraftingTab] = useState("main");
 
   return (
     <div className="container mx-auto p-4 bg-white text-black">
