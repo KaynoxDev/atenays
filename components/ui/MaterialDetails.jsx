@@ -41,57 +41,100 @@ export default function MaterialDetails({ material }) {
             <div className="border-t pt-4 mt-4">
               <h3 className="font-medium mb-2">Informations de craft</h3>
               
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="font-medium">Quantité produite:</div>
-                <div>{material.barCrafting.outputQuantity || 1} par craft</div>
-                
+              {/* Mise en valeur de la quantité produite */}
+              <div className="bg-blue-50 p-3 rounded-md mb-3 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-blue-800">Quantité produite:</span>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 text-base px-3">
+                    {material.barCrafting.outputQuantity || 1} {material.name} par craft
+                  </Badge>
+                </div>
+              </div>
+              
+              {/* Ressources nécessaires avec quantités mises en évidence */}
+              <div className="grid grid-cols-1 gap-3">
                 {material.barCrafting.primaryResource && (
-                  <>
-                    <div className="font-medium">Ressource principale:</div>
-                    <div className="flex items-center gap-1">
+                  <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Ressource principale:</span>
+                      <Badge variant="outline" className="text-base px-3">
+                        {material.barCrafting.primaryResource.quantityPerBar || 1} unités
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
                       {material.barCrafting.primaryResource.iconName && (
                         <img
                           src={`https://wow.zamimg.com/images/wow/icons/small/${material.barCrafting.primaryResource.iconName.toLowerCase()}.jpg`}
                           alt={material.barCrafting.primaryResource.name}
-                          className="w-4 h-4 rounded"
+                          className="w-6 h-6 rounded"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
                           }}
                         />
                       )}
-                      {material.barCrafting.primaryResource.quantityPerBar || 1}x {material.barCrafting.primaryResource.name}
+                      <span>{material.barCrafting.primaryResource.name}</span>
                     </div>
-                  </>
+                  </div>
                 )}
                 
                 {material.barCrafting.hasSecondaryResource && material.barCrafting.secondaryResource && (
-                  <>
-                    <div className="font-medium">Ressource secondaire:</div>
-                    <div className="flex items-center gap-1">
+                  <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Ressource secondaire:</span>
+                      <Badge variant="outline" className="text-base px-3">
+                        {material.barCrafting.secondaryResource.quantityPerBar || 1} unités
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
                       {material.barCrafting.secondaryResource.iconName && (
                         <img
                           src={`https://wow.zamimg.com/images/wow/icons/small/${material.barCrafting.secondaryResource.iconName.toLowerCase()}.jpg`}
                           alt={material.barCrafting.secondaryResource.name}
-                          className="w-4 h-4 rounded"
+                          className="w-6 h-6 rounded"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
                           }}
                         />
                       )}
-                      {material.barCrafting.secondaryResource.quantityPerBar || 1}x {material.barCrafting.secondaryResource.name}
+                      <span>{material.barCrafting.secondaryResource.name}</span>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
               
-              <div className="text-xs text-muted-foreground mt-2">
-                Pour chaque craft: 
-                {material.barCrafting.primaryResource && `${material.barCrafting.primaryResource.quantityPerBar || 1}x ${material.barCrafting.primaryResource.name}`}
-                {material.barCrafting.hasSecondaryResource && material.barCrafting.secondaryResource && 
-                  ` + ${material.barCrafting.secondaryResource.quantityPerBar || 1}x ${material.barCrafting.secondaryResource.name}`} 
-                = {material.barCrafting.outputQuantity || 1}x {material.name}
+              {/* Résumé de la recette */}
+              <div className="mt-4 p-3 bg-green-50 rounded-md text-sm border border-green-100">
+                <div className="font-medium text-green-800 mb-1">Résumé de la recette:</div>
+                <div className="flex items-center gap-1 text-green-700">
+                  <div className="flex items-center">
+                    <Badge variant="outline" className="bg-white mr-1">
+                      {material.barCrafting.primaryResource.quantityPerBar || 1}
+                    </Badge>
+                    {material.barCrafting.primaryResource.name}
+                  </div>
+                  
+                  {material.barCrafting.hasSecondaryResource && material.barCrafting.secondaryResource && (
+                    <>
+                      <span>+</span>
+                      <div className="flex items-center">
+                        <Badge variant="outline" className="bg-white mr-1">
+                          {material.barCrafting.secondaryResource.quantityPerBar || 1}
+                        </Badge>
+                        {material.barCrafting.secondaryResource.name}
+                      </div>
+                    </>
+                  )}
+                  
+                  <span>=</span>
+                  <div className="flex items-center font-bold">
+                    <Badge className="bg-green-200 text-green-800 border-green-300 mr-1">
+                      {material.barCrafting.outputQuantity || 1}
+                    </Badge>
+                    {material.name}
+                  </div>
+                </div>
               </div>
             </div>
           )}

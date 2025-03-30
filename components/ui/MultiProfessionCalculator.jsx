@@ -1,19 +1,14 @@
 'use client';
 
-import React from 'react';
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Plus, Minus, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useGet } from '@/hooks/useApi';
-import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '@/components/ui/checkbox';
-import MaterialCalculator from '@/components/ui/MaterialCalculator';
-import { Trash2, Plus, ChevronsUpDown, Package, Filter, ArrowRight } from 'lucide-react';
+import MaterialDetails from '@/components/ui/MaterialDetails';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function MultiProfessionCalculator() {
   // Charger les professions depuis l'API
@@ -42,16 +37,6 @@ export default function MultiProfessionCalculator() {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un métier valide.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Éviter les doublons - use safeProfessions instead of professions
-    if (selectedProfessions.some(p => p.name === profName && p.levelRange === levelRange)) {
-      toast({
-        title: "Profession déjà ajoutée",
-        description: `${profName} (niveau ${levelRange}) est déjà dans votre sélection.`,
         variant: "destructive"
       });
       return;
@@ -93,113 +78,234 @@ export default function MultiProfessionCalculator() {
       }
     }
   };
+
+  // Add new profession to the list (MODIFY THIS FUNCTION)
+  const addProfession = () => {
+    setSelectedProfessions((prev) => {
+      // Create a new unique ID for this profession instance
+      const newProfessionId = Date.now();
+      
+      return [...prev, { 
+        id: newProfessionId, // Add an ID to uniquely identify each profession instance
+        profession: '', 
+        levelRange: '525' 
+      }];
+    });
+  };
+
+  // Update profession at index
+  const updateProfession = (index, field, value) => {
+    setSelectedProfessions((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  // Filter available professions - REMOVE ANY FILTERING THAT PREVENTS DUPLICATE SELECTIONS
+  const availableProfessions = useMemo(() => {
+    if (!Array.isArray(professions)) return [];
+    
+    // Return all professions without filtering out already selected ones
+    return professions;
+  }, [professions]);
   
+  // Mise à jour de l'interface utilisateur pour rendre le bouton "+" plus clair
+  // et améliorer l'affichage des quantités de craft
   return (
-    <div className="container mx-auto p-4">
-      <div className="grid gap-6">
-        <Card>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="md:col-span-1">
           <CardHeader>
-            <CardTitle>Calculateur multi-métier</CardTitle>
-            <CardDescription>Calculez les matériaux nécessaires pour plusieurs métiers</CardDescription>
+            <CardTitle>Professions</CardTitle>
+            <CardDescription>Sélectionnez les professions à calculer</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="profession">Métier</Label>
-                <Select onValueChange={(value) => handleAddProfession(value)}>
-                  <SelectTrigger id="profession">
-                    <SelectValue placeholder="Sélectionner un métier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loadingProfessions ? (
-                      <SelectItem value="loading" disabled>Chargement des métiers...</SelectItem>
-                    ) : safeProfessions.length === 0 ? (
-                      <SelectItem value="none" disabled>Aucun métier disponible</SelectItem>
-                    ) : (
-                      safeProfessions.map(profession => (
-                        <SelectItem key={profession._id || `prof-${Math.random()}`} value={profession.name}>
-                          {profession.icon} {profession.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2 col-span-2">
-                <Label>Métiers actuellement sélectionnés</Label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedProfessions.map((prof, index) => (
-                    <div 
-                      key={index} 
-                      className={`
-                        flex items-center gap-1.5 px-3 py-1 rounded-full text-sm 
-                        ${activeTab === `profession-${index}` 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-secondary text-secondary-foreground'}
-                      `}
-                    >
-                      <span>{prof.name} ({prof.levelRange})</span>
-                      <button 
-                        onClick={() => handleRemoveProfession(index)} 
-                        className="text-muted-foreground hover:text-white rounded-full"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
+          <CardContent className="space-y-2">
+            {/* Bouton pour ajouter une profession : rendre l'objectif plus clair */}
+            <Button
+              onClick={addProfession}
+              variant="outline"
+              className="w-full flex items-center justify-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter une profession à calculer
+            </Button>
+            
+            {/* Liste des professions sélectionnées */}
+            <div className="space-y-4 mt-4">
+              {selectedProfessions.map((profItem, index) => (
+                <div key={profItem.id || index} className="flex flex-col md:flex-row gap-4 p-4 border rounded-lg">
+                  {/* ...existing code... */}
                   
-                  {selectedProfessions.length === 0 && (
-                    <div className="text-muted-foreground italic">
-                      Aucun métier sélectionné
-                    </div>
-                  )}
+                  {/* Clarifier que ce bouton supprime la profession du calculateur */}
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => removeProfession(index)}
+                    className="md:ml-auto"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
         
-        {selectedProfessions.length > 0 ? (
-          <Card>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <CardHeader className="flex flex-row items-center">
-                <div className="flex-1">
-                  <CardTitle>Calculateur de matériaux</CardTitle>
-                  <CardDescription>Calculez les matériaux nécessaires pour chaque métier</CardDescription>
-                </div>
-                <TabsList className="overflow-x-auto">
-                  {selectedProfessions.map((prof, index) => (
-                    <TabsTrigger key={index} value={`profession-${index}`}>
-                      {prof.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </CardHeader>
-              <CardContent>
-                {selectedProfessions.map((prof, index) => (
-                  <TabsContent key={index} value={`profession-${index}`}>
-                    <MaterialCalculator 
-                      profession={prof.name} 
-                      levelRange={prof.levelRange}
-                    />
-                  </TabsContent>
+        {/* Panneau des matériaux */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Matériaux requis</CardTitle>
+            <CardDescription>
+              Résultats du calcul pour les professions sélectionnées
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Chargement des matériaux...
+              </div>
+            ) : selectedMaterials.length > 0 ? (
+              <div className="space-y-6">
+                {/* Liste des matériaux avec quantités mises en évidence */}
+                {Object.entries(materialsByCategory).map(([category, materials]) => (
+                  <div key={category} className="space-y-2">
+                    <h3 className="font-medium text-lg">{category === 'other' ? 'Autres ressources' : category}</h3>
+                    
+                    <div className="space-y-2">
+                      {materials.map((material) => (
+                        <div 
+                          key={material.id}
+                          className="border rounded-lg p-3 hover:bg-accent/10 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {material.iconName && (
+                                <img
+                                  src={`https://wow.zamimg.com/images/wow/icons/small/${material.iconName.toLowerCase()}.jpg`}
+                                  alt={material.name}
+                                  className="w-8 h-8 rounded"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = 'https://wow.zamimg.com/images/wow/icons/small/inv_misc_questionmark.jpg';
+                                  }}
+                                />
+                              )}
+                              <div>
+                                <div className="font-medium">
+                                  {material.name}
+                                  {material.isCraftable && (
+                                    <Badge variant="outline" className="ml-2">
+                                      Craftable
+                                    </Badge>
+                                  )}
+                                </div>
+                                {material.profession && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {material.profession}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Badge plus visible pour la quantité */}
+                            <Badge variant="secondary" className="text-base px-3 py-1">
+                              {material.quantity}
+                            </Badge>
+                          </div>
+                          
+                          {/* Information de crafting pour les matériaux craftables */}
+                          {material.isCraftable && material.craftComponents && (
+                            <div className="mt-2 pt-2 border-t">
+                              <details className="group">
+                                <summary className="flex items-center cursor-pointer text-sm text-muted-foreground">
+                                  <ChevronDown className="h-4 w-4 mr-1 group-open:hidden" />
+                                  <ChevronUp className="h-4 w-4 mr-1 hidden group-open:block" />
+                                  Détails du craft
+                                </summary>
+                                <div className="mt-2 pl-4 space-y-2 text-sm">
+                                  {/* Afficher les informations de craft avec quantités */}
+                                  <div className="flex items-center gap-1 bg-muted/20 p-1 rounded">
+                                    {material.craftComponents.map((component, idx) => (
+                                      <React.Fragment key={idx}>
+                                        {idx > 0 && <span>+</span>}
+                                        <div className="flex items-center">
+                                          <Badge variant="outline" className="mr-1 text-xs">
+                                            {component.quantity / (material.craftRatio?.craftsNeeded || 1)}
+                                          </Badge>
+                                          <span>{component.name}</span>
+                                        </div>
+                                      </React.Fragment>
+                                    ))}
+                                    <ArrowRight className="h-3 w-3 mx-1" />
+                                    <div className="flex items-center">
+                                      <Badge className="mr-1 bg-green-100 text-green-800 text-xs">
+                                        {material.craftRatio?.outputQuantity || 1}
+                                      </Badge>
+                                      <span>{material.name}</span>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="text-xs">
+                                    <span className="font-medium">Pour {material.quantity} unités:</span> {material.craftRatio?.craftsNeeded || Math.ceil(material.quantity)} crafts nécessaires
+                                  </div>
+                                  
+                                  {/* Liste des ressources totales requises */}
+                                  <div className="mt-2 pt-2 border-t">
+                                    <span className="font-medium text-xs">Ressources nécessaires:</span>
+                                    <div className="mt-1 space-y-1">
+                                      {material.craftComponents.map((component, idx) => (
+                                        <div key={idx} className="flex items-center justify-between">
+                                          <span>{component.name}</span>
+                                          <Badge variant="outline">{component.quantity}</Badge>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </details>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              </CardContent>
-            </Tabs>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <Package className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucun métier sélectionné</h3>
-              <p className="text-muted-foreground">
-                Sélectionnez un métier dans la liste ci-dessus pour commencer à calculer les matériaux nécessaires.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+                
+                {/* Liste des matériaux totaux */}
+                <div className="border-t pt-4">
+                  <h3 className="font-medium mb-2">Liste complète des matériaux</h3>
+                  <div className="space-y-1 p-2 bg-muted/20 rounded-lg">
+                    {totalList.map((item, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{item.name}</span>
+                        <Badge variant="outline">{item.quantity}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Sélectionnez au moins une profession pour voir les matériaux requis
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+      
+      {/* Détails du matériau sélectionné */}
+      {selectedMaterial && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Détails du matériau</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MaterialDetails material={selectedMaterial} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
