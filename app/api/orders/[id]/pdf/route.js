@@ -17,44 +17,44 @@ export async function GET(request, { params }) {
     
     const { db } = await connectToDatabase();
     
-    // Valider l'ID
+    // Validate ID
     if (!ObjectId.isValid(id)) {
       return NextResponse.json({ error: 'ID de commande invalide' }, { status: 400 });
     }
     
-    // Récupérer la commande
+    // Get order
     const order = await db.collection('orders').findOne({ _id: new ObjectId(id) });
     
     if (!order) {
       return NextResponse.json({ error: 'Commande non trouvée' }, { status: 404 });
     }
     
-    // Convert MongoDB document to a plain JavaScript object with proper serialization
-    const plainOrder = JSON.parse(JSON.stringify({
+    // Convert to plain object
+    const plainOrder = {
       ...order,
       _id: order._id.toString()
-    }));
+    };
     
     console.log('Generating PDF for order:', plainOrder._id);
     
-    // Générer un nom de fichier pour le PDF
+    // Generate filename
     const filename = `commande_${plainOrder._id.substring(0, 8)}.pdf`;
     
     try {
-      // Simplified import approach - just get the default export
+      // Import the PDF component with a specific path
       const OrderPDF = (await import('@/components/ui/OrderPDF')).default;
       
       if (!OrderPDF) {
         throw new Error('Failed to load OrderPDF component');
       }
       
-      // Create a proper React element using createElement
+      // Create the React element correctly
       const element = React.createElement(OrderPDF, { order: plainOrder });
       
       // Render to buffer
       const buffer = await renderToBuffer(element);
       
-      // Retourner le PDF comme une réponse avec le bon Content-Type et Content-Disposition
+      // Return the PDF
       return new NextResponse(buffer, {
         status: 200,
         headers: {
@@ -64,11 +64,10 @@ export async function GET(request, { params }) {
       });
     } catch (renderError) {
       console.error('Error rendering PDF:', renderError);
-      console.error('Error details:', renderError.stack);
       
       return NextResponse.json({ 
         error: `PDF rendering failed: ${renderError.message}`,
-        stack: renderError.stack,
+        stack: renderError.stack
       }, { status: 500 });
     }
   } catch (error) {

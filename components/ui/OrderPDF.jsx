@@ -1,13 +1,7 @@
 import React from 'react';
-import { 
-  Document, 
-  Page, 
-  Text, 
-  View, 
-  StyleSheet
-} from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-// Définir les styles
+// Create styles
 const styles = StyleSheet.create({
   page: {
     padding: 30,
@@ -18,7 +12,7 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20,
-    borderBottom: '1px solid #ddd',
+    borderBottom: '1 solid #ddd',
     paddingBottom: 10,
   },
   title: {
@@ -33,12 +27,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   statusBadge: {
-    padding: '4px 8px',
+    padding: '4 8',
     borderRadius: 4,
     fontSize: 12,
-    display: 'inline-block',
     marginBottom: 10,
-    fontWeight: 'bold',
   },
   statusPending: {
     backgroundColor: '#e0f2fe',
@@ -64,7 +56,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
     backgroundColor: '#f3f4f6',
-    padding: '5px 10px',
+    padding: '5 10',
     borderRadius: 4,
   },
   row: {
@@ -81,17 +73,13 @@ const styles = StyleSheet.create({
   tableHeader: {
     backgroundColor: '#f3f4f6',
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderStyle: 'solid',
-    borderColor: '#ddd',
+    borderBottom: '1 solid #ddd',
     paddingVertical: 8,
     fontWeight: 'bold',
   },
   tableRow: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderStyle: 'solid',
-    borderColor: '#eee',
+    borderBottom: '1 solid #eee',
     paddingVertical: 8,
   },
   tableCell: {
@@ -105,9 +93,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 8,
     fontWeight: 'bold',
-    borderTopWidth: 1,
-    borderStyle: 'solid',
-    borderColor: '#ddd',
+    borderTop: '1 solid #ddd',
   },
   notes: {
     marginTop: 10,
@@ -124,17 +110,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 10,
     color: '#666',
-    borderTopWidth: 1,
-    borderStyle: 'solid',
-    borderColor: '#eee',
+    borderTop: '1 solid #eee',
     paddingTop: 10,
   },
 });
 
-// Create and export the Document component directly
-// This is a critical change for React-PDF compatibility
+// This must be exactly as shown in the React-PDF documentation
 const OrderPDF = ({ order }) => {
-  // Safe default values
+  // Use safe defaults and extract values
   const safeOrder = order || {};
   const {
     _id = '',
@@ -149,7 +132,10 @@ const OrderPDF = ({ order }) => {
     professions = []
   } = safeOrder;
   
-  // Formatter les dates
+  // Convert professions to a safe array
+  const safeProfessions = Array.isArray(professions) ? professions : [];
+  
+  // Helper functions for formatting
   const formatDate = (dateString) => {
     try {
       if (!dateString) return 'N/A';
@@ -160,44 +146,38 @@ const OrderPDF = ({ order }) => {
     }
   };
   
-  // Déterminer le style du badge de statut
-  const getStatusStyle = () => {
-    switch (status) {
-      case 'pending': return styles.statusPending;
-      case 'in-progress': return styles.statusInProgress;
-      case 'completed': return styles.statusCompleted;
-      case 'cancelled': return styles.statusCancelled;
-      default: return {};
-    }
-  };
+  // Get status style
+  let statusStyle;
+  switch (status) {
+    case 'pending': statusStyle = styles.statusPending; break;
+    case 'in-progress': statusStyle = styles.statusInProgress; break;
+    case 'completed': statusStyle = styles.statusCompleted; break;
+    case 'cancelled': statusStyle = styles.statusCancelled; break;
+    default: statusStyle = {};
+  }
   
-  // Traduire le statut
-  const getStatusName = (statusValue) => {
-    const translations = {
-      pending: 'En attente',
-      'in-progress': 'En cours',
-      completed: 'Terminée',
-      cancelled: 'Annulée'
-    };
-    return translations[statusValue] || statusValue;
+  // Status translation
+  const statusNames = {
+    pending: 'En attente',
+    'in-progress': 'En cours',
+    completed: 'Terminée',
+    cancelled: 'Annulée'
   };
-
-  // S'assurer que professions est un tableau
-  const safeProfessions = Array.isArray(professions) ? professions : [];
+  const statusName = statusNames[status] || status;
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* En-tête */}
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Aténays - Détails de commande</Text>
-          <Text style={styles.orderNumber}>Commande #{_id?.substring(0, 8) || 'N/A'}</Text>
-          <View style={[styles.statusBadge, getStatusStyle()]}>
-            <Text>{getStatusName(status)}</Text>
+          <Text style={styles.orderNumber}>Commande #{_id ? _id.substring(0, 8) : 'N/A'}</Text>
+          <View style={[styles.statusBadge, statusStyle]}>
+            <Text>{statusName}</Text>
           </View>
         </View>
         
-        {/* Informations du client */}
+        {/* Client Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Informations client</Text>
           <View style={styles.row}>
@@ -218,7 +198,7 @@ const OrderPDF = ({ order }) => {
           </View>
         </View>
         
-        {/* Détails des services */}
+        {/* Service Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Services commandés</Text>
           <View style={styles.tableHeader}>
@@ -242,7 +222,7 @@ const OrderPDF = ({ order }) => {
           </View>
         </View>
         
-        {/* Informations de paiement */}
+        {/* Payment Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Informations de paiement</Text>
           <View style={styles.row}>
@@ -269,7 +249,7 @@ const OrderPDF = ({ order }) => {
           </View>
         )}
         
-        {/* Pied de page */}
+        {/* Footer */}
         <Text style={styles.footer}>
           Document généré le {new Date().toLocaleDateString('fr-FR')} par Aténays • Ce document fait office de reçu pour la commande
         </Text>
@@ -278,5 +258,5 @@ const OrderPDF = ({ order }) => {
   );
 };
 
-// Export as default only - this is important for React-PDF compatibility
+// Export as default only to avoid confusion
 export default OrderPDF;
