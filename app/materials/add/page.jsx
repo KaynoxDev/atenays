@@ -300,6 +300,9 @@ export default function AddMaterialPage() {
     // Filtrer les matériaux
     return allMaterials
       .filter(m => {
+        // Ensure m is not null before accessing properties
+        if (!m) return false;
+        
         // Recherche insensible à la casse
         const searchTerm = primarySearch.toLowerCase().trim();
         const materialName = (m.name || '').toLowerCase();
@@ -315,7 +318,7 @@ export default function AddMaterialPage() {
           const categoryMatches = !primaryFilters.category || m.categoryId === primaryFilters.category;
           const professionMatches = !primaryFilters.profession || 
             (m.profession === primaryFilters.profession || 
-            (m.professions && m.professions.includes(primaryFilters.profession)));
+            (Array.isArray(m.professions) && m.professions.includes(primaryFilters.profession)));
           
           return matchesName && categoryMatches && professionMatches;
         }
@@ -387,7 +390,7 @@ export default function AddMaterialPage() {
   const getCategoryName = (categoryId) => {
     if (!categoryId) return 'Non catégorisé';
     if (!Array.isArray(categories)) return 'Catégorie inconnue';
-    const category = categories.find(c => c._id === categoryId);
+    const category = categories.find(c => c?._id === categoryId);
     return category ? category.name : 'Catégorie inconnue';
   };
 

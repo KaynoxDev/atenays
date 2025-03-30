@@ -30,16 +30,17 @@ export default function EditOrderGroupPage() {
   // Récupérer toutes les commandes disponibles - ensure we have a default empty array
   const { data: allOrders = [], loading: loadingOrders } = useGet('/api/orders');
   
-  // Filtrer les commandes selon la recherche - add null check with Array.isArray
+  // Filtrer les commandes selon la recherche avec additional safety
   const filteredOrders = Array.isArray(allOrders) 
     ? allOrders.filter(order => {
+        if (!order) return false;  // Skip null orders
         if (!searchTerm) return true;
         
         const searchLower = searchTerm.toLowerCase();
         return (
-          order.clientName?.toLowerCase().includes(searchLower) ||
-          order.character?.toLowerCase().includes(searchLower) ||
-          order._id?.includes(searchLower)
+          (order.clientName || '').toLowerCase().includes(searchLower) ||
+          (order.character || '').toLowerCase().includes(searchLower) ||
+          (order._id || '').includes(searchLower)
         );
       })
     : [];
@@ -52,7 +53,8 @@ export default function EditOrderGroupPage() {
       
       // Extraire les IDs des commandes déjà dans le groupe - add additional null check
       if (group.orders && Array.isArray(group.orders)) {
-        setSelectedOrders(group.orders.map(order => order._id));
+        const validOrders = group.orders.filter(order => order && order._id);
+        setSelectedOrders(validOrders.map(order => order._id));
       }
     }
   }, [group]);

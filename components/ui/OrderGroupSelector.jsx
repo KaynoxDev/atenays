@@ -131,9 +131,9 @@ export default function OrderGroupSelector({ order }) {
     }
   };
   
-  // Trouver le nom du groupe actuel
+  // Trouver le nom du groupe actuel - Add null check
   const currentGroupName = selectedGroupId 
-    ? orderGroups.find(g => g._id === selectedGroupId)?.name || "Groupe inconnu"
+    ? (Array.isArray(orderGroups) ? orderGroups.find(g => g._id === selectedGroupId)?.name : null) || "Groupe inconnu"
     : "Aucun groupe";
   
   return (
@@ -204,7 +204,7 @@ export default function OrderGroupSelector({ order }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Aucun groupe</SelectItem>
-                    {orderGroups.map((group) => (
+                    {Array.isArray(orderGroups) && orderGroups.map((group) => (
                       <SelectItem key={group._id} value={group._id}>
                         {group.name} ({group.orderCount || 0} commandes)
                       </SelectItem>

@@ -131,7 +131,7 @@ export default function OrderGroupsPage() {
             <div className="text-center py-8 text-muted-foreground">
               Chargement des groupes...
             </div>
-          ) : groups.length === 0 ? (
+          ) : !Array.isArray(groups) || groups.length === 0 ? ( // Add Array.isArray check
             <div className="text-center py-8 text-muted-foreground">
               Aucun groupe de commandes trouvé. Créez votre premier groupe !
             </div>
@@ -148,54 +148,56 @@ export default function OrderGroupsPage() {
               </TableHeader>
               <TableBody>
                 {groups.map((group) => (
-                  <TableRow key={group._id}>
-                    <TableCell>
-                      <div className="font-medium flex items-center">
-                        <Layers className="h-4 w-4 mr-2 text-primary" />
-                        {group.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>{group.description || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        <Users className="h-3 w-3 mr-1" />
-                        {group.orderCount || 0} commandes
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-muted-foreground text-sm">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {formatDate(group.createdAt)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Link href={`/order-groups/${group._id}/edit`}>
-                          <Button variant="outline" size="sm" className="h-8">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Éditer
+                  group ? ( // Skip rendering if group is null
+                    <TableRow key={group._id || Math.random().toString()}>
+                      <TableCell>
+                        <div className="font-medium flex items-center">
+                          <Layers className="h-4 w-4 mr-2 text-primary" />
+                          {group.name || "Groupe sans nom"}
+                        </div>
+                      </TableCell>
+                      <TableCell>{group.description || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          <Users className="h-3 w-3 mr-1" />
+                          {group.orderCount || 0} commandes
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-muted-foreground text-sm">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatDate(group.createdAt)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Link href={`/order-groups/${group._id}/edit`}>
+                            <Button variant="outline" size="sm" className="h-8">
+                              <Edit className="h-4 w-4 mr-1" />
+                              Éditer
+                            </Button>
+                          </Link>
+                          <Link href={`/order-groups/${group._id}/resources`}>
+                            <Button variant="outline" size="sm" className="h-8">
+                              <Calculator className="h-4 w-4 mr-1" />
+                              Ressources
+                            </Button>
+                          </Link>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => {
+                              setSelectedGroup(group);
+                              setIsDeleting(true);
+                            }}
+                            className="h-8 w-8"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
-                        </Link>
-                        <Link href={`/order-groups/${group._id}/resources`}>
-                          <Button variant="outline" size="sm" className="h-8">
-                            <Calculator className="h-4 w-4 mr-1" />
-                            Ressources
-                          </Button>
-                        </Link>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => {
-                            setSelectedGroup(group);
-                            setIsDeleting(true);
-                          }}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : null
                 ))}
               </TableBody>
             </Table>
