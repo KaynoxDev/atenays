@@ -970,11 +970,92 @@ export default function AddMaterialPage() {
                     />
                   </div>
                   
-                  {/* ...existing code for other form fields... */}
+                  <div className="space-y-2">
+                    <Label htmlFor="iconName">Nom de l'icône</Label>
+                    <Input
+                      id="iconName"
+                      name="iconName"
+                      value={currentMaterial.iconName}
+                      onChange={handleChange}
+                      placeholder="Ex: inv_ore_copper_01"
+                    />
+                    {currentMaterial.iconName && (
+                      <div className="mt-2">
+                        <img
+                          src={`https://wow.zamimg.com/images/wow/icons/medium/${currentMaterial.iconName.toLowerCase()}.jpg`}
+                          alt="Aperçu de l'icône"
+                          className="w-12 h-12 rounded"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://wow.zamimg.com/images/wow/icons/medium/inv_misc_questionmark.jpg';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="categoryId">Catégorie</Label>
+                    <Select
+                      value={currentMaterial.categoryId}
+                      onValueChange={(value) => handleSelectChange('categoryId', value)}
+                    >
+                      <SelectTrigger id="categoryId">
+                        <SelectValue placeholder="Sélectionner une catégorie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Non catégorisé</SelectItem>
+                        {Array.isArray(categories) && categories.map((category) => (
+                          <SelectItem key={category._id} value={category._id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
-                  {/* ...existing code for other form fields... */}
+                  <div className="space-y-2">
+                    <Label htmlFor="profession">Profession principale</Label>
+                    <Select
+                      value={currentMaterial.profession}
+                      onValueChange={(value) => handleSelectChange('profession', value)}
+                    >
+                      <SelectTrigger id="profession">
+                        <SelectValue placeholder="Sélectionner une profession" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Aucune profession</SelectItem>
+                        {Array.isArray(professions) && professions.map((prof) => (
+                          <SelectItem key={prof._id} value={prof.name}>
+                            {prof.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="levelRange">Niveau de compétence requis</Label>
+                    <Select
+                      value={currentMaterial.levelRange}
+                      onValueChange={(value) => handleSelectChange('levelRange', value)}
+                    >
+                      <SelectTrigger id="levelRange">
+                        <SelectValue placeholder="Niveau requis" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="75">1-75 (Apprenti)</SelectItem>
+                        <SelectItem value="150">1-150 (Compagnon)</SelectItem>
+                        <SelectItem value="225">1-225 (Expert)</SelectItem>
+                        <SelectItem value="300">1-300 (Artisan)</SelectItem>
+                        <SelectItem value="375">1-375 (Maître)</SelectItem>
+                        <SelectItem value="450">1-450 (Grand maître)</SelectItem>
+                        <SelectItem value="525">1-525 (Illustre)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -986,8 +1067,6 @@ export default function AddMaterialPage() {
                       Ce matériau peut être fabriqué (craftable)
                     </Label>
                   </div>
-                  
-                  {/* ...existing code for crafting configuration... */}
                 </div>
               </div>
               
