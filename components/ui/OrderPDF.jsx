@@ -164,6 +164,9 @@ const OrderPDF = ({ order }) => {
     initialPayment,
     professions
   } = safeOrder;
+
+  // This was missing - get professions array safely
+  const safeProfessions = Array.isArray(professions) ? professions : [];
   
   // Helper functions for formatting
   const formatDate = (dateString) => {
@@ -238,7 +241,7 @@ const OrderPDF = ({ order }) => {
           </View>
           
           {safeProfessions.map((prof, idx) => (
-            <View key={`prof-${idx}`} style={styles.tableRow}>
+            <View key={idx} style={styles.tableRow}>
               <Text style={[styles.tableCell, styles.col1]}>{prof.name || 'N/A'}</Text>
               <Text style={[styles.tableCell, styles.col2]}>1-{prof.levelRange || '525'}</Text>
               <Text style={[styles.tableCell, styles.col3]}>{prof.price || 0} or</Text>
