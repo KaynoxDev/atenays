@@ -342,10 +342,11 @@ export default function AddMaterialPage() {
   // État pour les alternatives de craft
   const [craftAlternatives, setCraftAlternatives] = useState([]);
   
-  // Ajouter une nouvelle alternative de craft
+  // Ajouter une nouvelle alternative de craft avec un ID unique
   const addCraftAlternative = () => {
     const newAlternative = {
       id: Date.now(), // ID unique pour cette alternative
+      name: `Alternative ${craftAlternatives.length + 1}`,
       primaryResource: {
         name: '',
         materialId: '',
@@ -359,51 +360,61 @@ export default function AddMaterialPage() {
         quantityPerBar: 1
       },
       hasSecondaryResource: false,
-      isPreferred: false, // Indique si c'est l'alternative préférée
-      outputQuantity: material.barCrafting.outputQuantity || 1 // Par défaut, même quantité que la méthode principale
+      isPreferred: false,
+      outputQuantity: material.barCrafting.outputQuantity || 1,
+      searchTerm: '', // Pour la recherche de ressource primaire
+      secondarySearchTerm: '' // Pour la recherche de ressource secondaire
     };
     
     setCraftAlternatives(prev => [...prev, newAlternative]);
-  };
-  
-  // Supprimer une alternative de craft
-  const removeCraftAlternative = (index) => {
-    setCraftAlternatives(prev => prev.filter((_, i) => i !== index));
-  };
-  
-  // Mettre à jour une alternative de craft
-  const updateCraftAlternative = (index, field, value) => {
-    setCraftAlternatives(prev => {
-      const updated = [...prev];
-      
-      // Gérer les champs imbriqués avec la notation dot
-      if (field.includes('.')) {
-        const [parent, child] = field.split('.');
-        updated[index][parent][child] = value;
-      } else {
-        updated[index][field] = value;
-      }
-      
-      return updated;
+    
+    // Basculer automatiquement vers l'onglet de crafting si nous sommes sur l'onglet basic
+    if (activeSection === "basic" && material.isBar) {
+      setActiveSection("crafting");
+    }
+    
+    // Notification pour l'utilisateur
+    toast({
+      title: "Alternative ajoutée",
+      description: "Vous pouvez maintenant configurer les ressources pour cette alternative."
     });
   };
   
-  // Sélectionner une ressource pour une alternative (unused function warning)
-  // You can either remove this function if not needed, or implement its usage in the UI
-  // Option 1: Remove the unused function
-  // const selectAlternativeResource = (altId, resourceType, resource) => {
-  //   updateAlternative(altId, resourceType, {
-  //     name: resource.name,
-  //     materialId: resource._id,
-  //     iconName: resource.iconName || '',
-  //     quantityPerBar: 1
-  //   });
-  // };
+  // Supprimer une alternative de craft
+  const removeCraftAlternative = (altId) => {
+    setCraftAlternatives(prev => prev.filter(alt => alt.id !== altId));
+    
+    toast({
+      title: "Alternative supprimée"
+    });
+  };
   
-  // Option 2: Use the function by adding material search results functionality to alternatives
-  // Let's implement this option by adding filtering and result selection
+  // Mettre à jour une alternative
+  const updateAlternative = (altId, field, value) => {
+    setCraftAlternatives(prev => prev.map(alt => {
+      if (alt.id !== altId) return alt;
+      
+      // Pour les champs imbriqués (ex: primaryResource.name)
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        return {
+          ...alt,
+          [parent]: {
+            ...alt[parent],
+            [child]: value
+          }
+        };
+      }
+      
+      // Pour les champs simples
+      return {
+        ...alt,
+        [field]: value
+      };
+    }));
+  };
 
-  // Filter materials for each alternative based on their search terms
+  // Filter materials for search results
   const getFilteredAlternativeMaterials = (alternative, type) => {
     const searchField = type === 'primaryResource' ? 'searchTerm' : 'secondarySearchTerm';
     const searchTerm = alternative[searchField] || '';
@@ -412,12 +423,11 @@ export default function AddMaterialPage() {
     
     return allMaterials.filter(material => 
       material.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ).slice(0, 5); // Limit to 5 results for better performance
+    ).slice(0, 5); // Limit to 5 results
   };
   
-  // Add this function to handle when a material is selected from search results
+  // Handle selecting a material from search results
   const handleAlternativeMaterialSelect = (altId, resourceType, material) => {
-    // Use the existing selectAlternativeResource function
     updateAlternative(altId, resourceType, {
       name: material.name,
       materialId: material._id,
@@ -425,78 +435,44 @@ export default function AddMaterialPage() {
       quantityPerBar: 1
     });
     
-    // Clear the search term after selection
+    // Clear the search term
     const searchField = resourceType === 'primaryResource' ? 'searchTerm' : 'secondarySearchTerm';
     updateAlternative(altId, searchField, '');
   };
 
-  // Soumettre le formulaire
+  // Adapter le handleSubmit pour inclure les alternatives
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!material.name) {
-      toast({
-        title: "Erreur",
-        description: "Le nom du matériau est requis",
-        variant: "destructive"
-      });
-      return;
-    }
+    setIsSubmitting(true);
     
     try {
-      setIsSubmitting(true);
-      
-      // Préparer le tableau de professions
-      let materialProfessions = [];
-      
-      // Ajouter la profession principale si elle existe et n'est pas "none"
-      if (material.profession && material.profession !== 'none') {
-        materialProfessions.push(material.profession);
-      }
-      
-      // Fusionner avec les professions existantes
-      if (Array.isArray(material.professions)) {
-        material.professions.forEach(prof => {
-          if (prof && !materialProfessions.includes(prof)) {
-            materialProfessions.push(prof);
-          }
-        });
-      }
-      
+      // Préparer les données à envoyer
       const materialToSubmit = {
         ...material,
-        // S'assurer que profession est définie correctement
-        profession: material.profession || (materialProfessions.length > 0 ? materialProfessions[0] : ''),
-        // S'assurer que professions est bien un tableau
-        professions: materialProfessions,
-        // ...other properties
-        // Ajouter les alternatives de craft si elles existent
         barCrafting: {
           ...material.barCrafting,
-          craftAlternatives: craftAlternatives.map(alt => ({
-            primaryResource: alt.primaryResource,
-            hasSecondaryResource: alt.hasSecondaryResource,
-            secondaryResource: alt.hasSecondaryResource ? alt.secondaryResource : null,
-            isPreferred: alt.isPreferred
-          }))
+          craftAlternatives: craftAlternatives
         }
       };
       
-      await apiPost('/api/materials', materialToSubmit);
+      console.log("Sending data with alternatives:", materialToSubmit);
+      
+      const response = await apiPost('/api/materials', materialToSubmit);
       
       toast({
-        title: "Matériau ajouté",
-        description: "Le matériau a été ajouté avec succès."
+        title: 'Matériau ajouté',
+        description: `Le matériau ${material.name} a été ajouté avec succès.`
       });
       
       router.push('/materials');
-    } catch (err) {
-      console.error('Erreur lors de l\'ajout du matériau:', err);
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du matériau:", error);
       toast({
-        title: "Erreur",
-        description: err.message || "Une erreur est survenue lors de l'ajout du matériau.",
+        title: 'Erreur',
+        description: "Une erreur s'est produite lors de l'ajout du matériau.",
         variant: "destructive"
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -685,6 +661,48 @@ export default function AddMaterialPage() {
                   </Select>
                 </div>
               </div>
+              
+              {/* Ajout d'un bouton pour ajouter des alternatives directement depuis la section basic */}
+              {material.isBar && (
+                <div className="bg-amber-50 p-4 rounded-md border border-amber-200 mt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="font-medium text-amber-800">Alternatives de craft</h3>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Ajoutez des méthodes alternatives pour fabriquer ce produit
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addCraftAlternative}
+                      className="border-amber-400 text-amber-800 hover:bg-amber-100"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Ajouter une alternative
+                    </Button>
+                  </div>
+                  
+                  {craftAlternatives.length > 0 ? (
+                    <div className="mt-3">
+                      <Text className="text-sm text-amber-700">
+                        {craftAlternatives.length} alternative{craftAlternatives.length > 1 ? 's' : ''} configurée{craftAlternatives.length > 1 ? 's' : ''}. 
+                        <Button 
+                          variant="link" 
+                          className="p-0 h-auto text-sm text-amber-800 underline"
+                          onClick={() => setActiveSection('crafting')}
+                        >
+                          Aller à la section de configuration
+                        </Button>
+                      </Text>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-amber-600 mt-2">
+                      Aucune alternative ajoutée pour l'instant.
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           )}
           
