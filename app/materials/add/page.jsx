@@ -592,36 +592,104 @@ export default function AddMaterialPage() {
     updateAlternative(altId, searchField, '');
   };
 
-  // Adapter le handleSubmit pour inclure les alternatives
+  // Améliorer la fonction handleSubmit pour vraiment soumettre tous les matériaux en mode multi-ajout
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Préparer les données à envoyer
-      const materialToSubmit = {
-        ...material,
-        barCrafting: {
-          ...material.barCrafting,
-          craftAlternatives: craftAlternatives
+      if (multiAddMode) {
+        // Vérifier que tous les matériaux ont un nom
+        const invalidMaterials = materialsList.filter(mat => !mat.name.trim());
+        if (invalidMaterials.length > 0) {
+          toast({
+            title: "Données incomplètes",
+            description: `${invalidMaterials.length} matériau(x) n'ont pas de nom défini.`,
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
         }
-      };
-      
-      console.log("Sending data with alternatives:", materialToSubmit);
-      
-      const response = await apiPost('/api/materials', materialToSubmit);
-      
-      toast({
-        title: 'Matériau ajouté',
-        description: `Le matériau ${material.name} a été ajouté avec succès.`
-      });
-      
-      router.push('/materials');
+        
+        // Soumettre tous les matériaux un par un avec gestion des erreurs
+        const results = [];
+        const errors = [];
+        
+        for (let i = 0; i < materialsList.length; i++) {
+          const mat = materialsList[i];
+          try {
+            // Préparer les données pour ce matériau specifique
+            const materialToSubmit = {
+              ...mat,
+              barCrafting: mat.isBar ? {
+                ...mat.barCrafting,
+                craftAlternatives: mat.barCrafting?.craftAlternatives || []
+              } : undefined
+            };
+            
+            console.log(`Submitting material ${i+1}/${materialsList.length}: ${mat.name}`);
+            const result = await apiPost('/api/materials', materialToSubmit);
+            results.push(result);
+          } catch (error) {
+            console.error(`Erreur lors de l'ajout du matériau ${mat.name}:`, error);
+            errors.push({ name: mat.name, error: error.message });
+          }
+        }
+        
+        // Afficher un message de succès global
+        if (results.length > 0) {
+          toast({
+            title: "Matériaux ajoutés",
+            description: `${results.length} matériau(x) ont été ajoutés avec succès sur ${materialsList.length}.`
+          });
+          
+          // Afficher les erreurs si certains matériaux n'ont pas pu être ajoutés
+          if (errors.length > 0) {
+            toast({
+              title: `${errors.length} erreur(s) rencontrée(s)`,
+              description: "Certains matériaux n'ont pas pu être ajoutés.",
+              variant: "destructive"
+            });
+          }
+          
+          // Rediriger vers la page des matériaux
+          router.push('/materials');
+        }
+      } else {
+        // Logique d'ajout pour un seul matériau (inchangée)
+        if (!material.name.trim()) {
+          toast({
+            title: "Erreur",
+            description: "Le nom du matériau est requis",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        
+        // Préparer les données à envoyer
+        const materialToSubmit = {
+          ...material,
+          barCrafting: {
+            ...material.barCrafting,
+            craftAlternatives: craftAlternatives
+          }
+        };
+        
+        const response = await apiPost('/api/materials', materialToSubmit);
+        
+        toast({
+          title: 'Matériau ajouté',
+          description: `Le matériau ${material.name} a été ajouté avec succès.`
+        });
+        
+        router.push('/materials');
+      }
     } catch (error) {
-      console.error("Erreur lors de l'ajout du matériau:", error);
+      console.error("Erreur lors de l'ajout du/des matériau(x):", error);
       toast({
         title: 'Erreur',
-        description: "Une erreur s'est produite lors de l'ajout du matériau.",
+        description: "Une erreur s'est produite lors de l'ajout.",
         variant: "destructive"
       });
     } finally {
@@ -629,10 +697,136 @@ export default function AddMaterialPage() {
     }
   };
 
-  // Tabs for crafting configuration
-  const [craftingTab, setCraftingTab] = useState("main");
-
-  // Obtenir le matériau actuellement sélectionné en mode multi-ajout
+  // Améliorer la gestion du formulaire pour le matériau actuellement sélectionné
+  const [currentMaterialAlternatives, setCurrentMaterialAlternatives] = useState([]);
+  
+  // Mettre à jour les alternatives pour le matériau actuellement sélectionné
+  useEffect(() => {
+    if (multiAddMode) {
+      // En mode multi-ajout, chaque matériau a ses propres alternatives
+      const currentMaterial = materialsList[selectedMaterialIndex];
+      if (currentMaterial && currentMaterial.barCrafting) {
+        setCurrentMaterialAlternatives(currentMaterial.barCrafting.craftAlternatives || []);
+      } else {
+        setCurrentMaterialAlternatives([]);
+      }
+    } else {
+      // En mode standard, utiliser les alternatives globales
+      setCurrentMaterialAlternatives(craftAlternatives);
+    }
+  }, [multiAddMode, selectedMaterialIndex, materialsList, craftAlternatives]);
+  
+  // Fonction pour ajouter une alternative au matériau actuellement sélectionné
+  const addAlternativeToCurrent = () => {
+    const newAlternative = {
+      id: Date.now(),
+      name: `Alternative ${currentMaterialAlternatives.length + 1}`,
+      primaryResource: { name: '', materialId: '', iconName: '', quantityPerBar: 1 },
+      secondaryResource: { name: '', materialId: '', iconName: '', quantityPerBar: 1 },
+      hasSecondaryResource: false,
+      isPreferred: false,
+      outputQuantity: currentMaterial.barCrafting?.outputQuantity || 1,
+      searchTerm: '',
+      secondarySearchTerm: ''
+    };
+    
+    if (multiAddMode) {
+      // En mode multi-ajout, mettre à jour le matériau spécifique
+      setMaterialsList(prev => {
+        const newList = [...prev];
+        if (!newList[selectedMaterialIndex].barCrafting.craftAlternatives) {
+          newList[selectedMaterialIndex].barCrafting.craftAlternatives = [];
+        }
+        newList[selectedMaterialIndex].barCrafting.craftAlternatives.push(newAlternative);
+        return newList;
+      });
+      setCurrentMaterialAlternatives(prev => [...prev, newAlternative]);
+    } else {
+      // En mode standard, utiliser la fonction existante
+      setCraftAlternatives(prev => [...prev, newAlternative]);
+    }
+    
+    toast({
+      title: "Alternative ajoutée",
+      description: "Vous pouvez maintenant configurer cette alternative."
+    });
+  };
+  
+  // Fonction pour mettre à jour une alternative du matériau actuellement sélectionné
+  const updateCurrentAlternative = (altId, field, value) => {
+    if (multiAddMode) {
+      // En mode multi-ajout, mettre à jour le matériau spécifique
+      setMaterialsList(prev => {
+        const newList = [...prev];
+        const alternatives = newList[selectedMaterialIndex].barCrafting.craftAlternatives || [];
+        const updatedAlternatives = alternatives.map(alt => {
+          if (alt.id !== altId) return alt;
+          
+          if (field.includes('.')) {
+            const [parent, child] = field.split('.');
+            return {
+              ...alt,
+              [parent]: {
+                ...alt[parent],
+                [child]: value
+              }
+            };
+          }
+          
+          return { ...alt, [field]: value };
+        });
+        
+        newList[selectedMaterialIndex].barCrafting.craftAlternatives = updatedAlternatives;
+        return newList;
+      });
+      
+      // Mettre également à jour l'état local des alternatives pour le rendu
+      setCurrentMaterialAlternatives(prev => prev.map(alt => {
+        if (alt.id !== altId) return alt;
+        
+        if (field.includes('.')) {
+          const [parent, child] = field.split('.');
+          return {
+            ...alt,
+            [parent]: {
+              ...alt[parent],
+              [child]: value
+            }
+          };
+        }
+        
+        return { ...alt, [field]: value };
+      }));
+    } else {
+      // En mode standard, utiliser la fonction existante
+      updateAlternative(altId, field, value);
+    }
+  };
+  
+  // Fonction pour supprimer une alternative du matériau actuellement sélectionné
+  const removeCurrentAlternative = (altId) => {
+    if (multiAddMode) {
+      // En mode multi-ajout, mettre à jour le matériau spécifique
+      setMaterialsList(prev => {
+        const newList = [...prev];
+        const alternatives = newList[selectedMaterialIndex].barCrafting.craftAlternatives || [];
+        newList[selectedMaterialIndex].barCrafting.craftAlternatives = alternatives.filter(alt => alt.id !== altId);
+        return newList;
+      });
+      
+      // Mettre également à jour l'état local des alternatives pour le rendu
+      setCurrentMaterialAlternatives(prev => prev.filter(alt => alt.id !== altId));
+    } else {
+      // En mode standard, utiliser la fonction existante
+      removeCraftAlternative(altId);
+    }
+    
+    toast({
+      title: "Alternative supprimée"
+    });
+  };
+  
+  // Obtenir le matériau actuellement sélectionné
   const currentMaterial = multiAddMode ? materialsList[selectedMaterialIndex] || getEmptyMaterial() : material;
 
   return (
